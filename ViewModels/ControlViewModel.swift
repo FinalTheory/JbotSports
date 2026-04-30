@@ -18,7 +18,6 @@ final class ControlViewModel: ObservableObject {
 
     private let ble: BLEManager
     private var spinAnchor: Int = 60
-    private let persistenceQueue = DispatchQueue(label: "tennis_ctl.presets.persistence", qos: .utility)
     private var randomRunTimer: Timer?
     private var randomCycleQueue: [UUID] = []
     private var randomCycleIndex: Int = 0
@@ -326,10 +325,8 @@ final class ControlViewModel: ObservableObject {
     }
 
     private func persistPresets(_ snapshots: [Preset]) {
-        persistenceQueue.async {
-            guard let data = try? JSONEncoder().encode(snapshots) else { return }
-            UserDefaults.standard.set(data, forKey: Self.presetsStorageKey)
-        }
+        guard let data = try? JSONEncoder().encode(snapshots) else { return }
+        UserDefaults.standard.set(data, forKey: Self.presetsStorageKey)
     }
 
     private static func loadPresets() -> [Preset] {

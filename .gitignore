@@ -1,0 +1,31 @@
+# macOS
+.DS_Store
+
+# Xcode / SwiftPM build artifacts
+DerivedData/
+.build/
+build/
+*.xcresult
+
+# Xcode user-specific files
+xcuserdata/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+
+# Provisioning / signing local files
+*.mobileprovision
+
+# Logs and temp files
+*.log
+*.tmp
+*.swp
+*.swo
+
+# Python cache (for local tooling scripts)
+__pycache__/
+*.pyc
+
+# Local env files
+.env
+.env.*
+
