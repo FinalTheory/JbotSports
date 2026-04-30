@@ -3,7 +3,6 @@ import Combine
 
 @MainActor
 final class ControlViewModel: ObservableObject {
-    @Published var isStarted: Bool = false
     @Published var randomRunInterval: Int = 30
     @Published var isRandomRunActive: Bool = false
     @Published var randomRunAlertMessage: String?
@@ -100,17 +99,36 @@ final class ControlViewModel: ObservableObject {
         }
     }
 
+    func addPreset(_ preset: Preset) {
+        let normalized = normalizedPreset(preset)
+        presets.append(normalized)
+        persistPresets(presets)
+    }
+
+    @discardableResult
+    func deletePreset(id: UUID) -> Bool {
+        guard presets.count > 1 else { return false }
+        guard let idx = presets.firstIndex(where: { $0.id == id }) else { return false }
+        let deletingActive = (activePresetID == id)
+        presets.remove(at: idx)
+        persistPresets(presets)
+
+        if deletingActive, let first = presets.first {
+            activePresetID = first.id
+            applyPresetState(first)
+        }
+        return true
+    }
+
     func start() {
         stopRandomRunLoop()
         guard let preset = activePreset else { return }
         sendStart(order: preset.order, random: preset.isRandom, startFlag: 1)
-        isStarted = true
     }
 
     func stop() {
         stopRandomRunLoop()
         ble.send(TennisCommand.stopV6())
-        isStarted = false
     }
 
     func incRandomRunInterval() {
@@ -321,7 +339,6 @@ final class ControlViewModel: ObservableObject {
 
     private func sendPresetStart(_ preset: Preset) {
         sendStart(order: preset.order, random: preset.isRandom, startFlag: 1)
-        isStarted = true
     }
 
     private func persistPresets(_ snapshots: [Preset]) {

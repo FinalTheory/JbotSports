@@ -3,6 +3,7 @@ import SwiftUI
 struct Page3View: View {
     @ObservedObject var vm: ControlViewModel
     @State private var editingPreset: Preset?
+    @State private var creatingPreset = false
 
     var body: some View {
         List {
@@ -33,6 +34,7 @@ struct Page3View: View {
                         editingPreset = p
                     } label: {
                         Image(systemName: "pencil")
+                            .foregroundStyle(p.shuffle ? .orange : .primary)
                             .frame(width: 24, height: 24)
                     }
                     .buttonStyle(.plain)
@@ -42,12 +44,48 @@ struct Page3View: View {
                 .listRowInsets(.init(top: 4, leading: 0, bottom: 4, trailing: 0))
                 .listRowBackground(Color.clear)
             }
+
+            HStack {
+                Spacer()
+                Button {
+                    creatingPreset = true
+                } label: {
+                    Image(systemName: "plus")
+                        .font(.headline.weight(.semibold))
+                        .frame(width: 34, height: 26)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+                Spacer()
+            }
+            .listRowInsets(.init(top: 2, leading: 0, bottom: 2, trailing: 0))
+            .listRowBackground(Color.clear)
         }
         .sheet(item: $editingPreset) { preset in
             NavigationStack {
-                PresetEditorView(preset: preset) { updated in
-                    vm.updatePreset(updated)
-                }
+                PresetEditorView(
+                    preset: preset,
+                    onSave: { updated in
+                        vm.updatePreset(updated)
+                    },
+                    onDelete: {
+                        _ = vm.deletePreset(id: preset.id)
+                    },
+                    canDelete: vm.presets.count > 1
+                )
+            }
+        }
+        .sheet(isPresented: $creatingPreset) {
+            NavigationStack {
+                PresetEditorView(
+                    preset: newPresetTemplate(),
+                    onSave: { created in
+                        vm.addPreset(created)
+                    }
+                )
             }
         }
     }
@@ -55,5 +93,19 @@ struct Page3View: View {
     private func modeTag(for preset: Preset) -> String {
         let base = preset.isRandom ? "R" : "S"
         return preset.shuffle ? "\(base)*" : base
+    }
+
+    private func newPresetTemplate() -> Preset {
+        Preset(
+            name: "New Preset",
+            order: [25],
+            isRandom: true,
+            shuffle: false,
+            interval: 0,
+            topSpeed: vm.topSpeed,
+            bottomSpeed: vm.bottomSpeed,
+            frequency: vm.frequency,
+            shortAngle: vm.shortAngle
+        )
     }
 }

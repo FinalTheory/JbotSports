@@ -6,7 +6,7 @@ struct Page2View: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Button("S+") { vm.incOverallSpeed() }
+                Button("S-") { vm.decOverallSpeed() }
                     .buttonStyle(.bordered)
                 VStack(spacing: 2) {
                     Text("U:\(vm.topSpeed)")
@@ -14,12 +14,12 @@ struct Page2View: View {
                 }
                 .font(.headline)
                 .frame(minWidth: 44)
-                Button("S-") { vm.decOverallSpeed() }
+                Button("S+") { vm.incOverallSpeed() }
                     .buttonStyle(.bordered)
             }
 
             HStack(spacing: 8) {
-                Button("H+") { vm.incHeight() }
+                Button("H-") { vm.decHeight() }
                     .buttonStyle(.bordered)
                 VStack(spacing: 2) {
                     Text("H:\(vm.shortAngle)")
@@ -27,7 +27,7 @@ struct Page2View: View {
                 }
                 .font(.headline)
                 .frame(minWidth: 52)
-                Button("H-") { vm.decHeight() }
+                Button("H+") { vm.incHeight() }
                     .buttonStyle(.bordered)
             }
 

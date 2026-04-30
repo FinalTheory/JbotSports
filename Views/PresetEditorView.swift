@@ -14,13 +14,23 @@ struct PresetEditorView: View {
     @State private var frequencyValue: Int
     @State private var shortAngleValue: Int
     @State private var error: String = ""
+    @State private var showDeleteConfirm = false
 
     let preset: Preset
     let onSave: (Preset) -> Void
+    let onDelete: (() -> Void)?
+    let canDelete: Bool
 
-    init(preset: Preset, onSave: @escaping (Preset) -> Void) {
+    init(
+        preset: Preset,
+        onSave: @escaping (Preset) -> Void,
+        onDelete: (() -> Void)? = nil,
+        canDelete: Bool = false
+    ) {
         self.preset = preset
         self.onSave = onSave
+        self.onDelete = onDelete
+        self.canDelete = canDelete
         _name = State(initialValue: preset.name)
         _orderText = State(initialValue: preset.orderText)
         _isRandom = State(initialValue: preset.isRandom)
@@ -139,8 +149,35 @@ struct PresetEditorView: View {
             .foregroundStyle(.white)
             .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
             .listRowBackground(Color.clear)
+
+            if let onDelete {
+                Button {
+                    showDeleteConfirm = true
+                }
+                label: {
+                    Text("Delete")
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .background(Color.red.opacity(0.45))
+                .foregroundStyle(.red)
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                .listRowBackground(Color.clear)
+                .disabled(!canDelete)
+            }
         }
         .navigationTitle("Edit Preset")
+        .alert("Delete Preset?", isPresented: $showDeleteConfirm) {
+            Button("Cancel", role: .cancel) {}
+            Button("Delete", role: .destructive) {
+                onDelete?()
+                dismiss()
+            }
+        } message: {
+            Text("This action cannot be undone.")
+        }
     }
 
     private var orderPreview: String {
