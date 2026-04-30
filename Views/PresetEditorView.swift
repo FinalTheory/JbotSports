@@ -7,6 +7,8 @@ struct PresetEditorView: View {
     @State private var name: String
     @State private var orderText: String
     @State private var isRandom: Bool
+    @State private var shuffle: Bool
+    @State private var intervalValue: Int
     @State private var topSpeedValue: Int
     @State private var bottomSpeedValue: Int
     @State private var frequencyValue: Int
@@ -22,6 +24,8 @@ struct PresetEditorView: View {
         _name = State(initialValue: preset.name)
         _orderText = State(initialValue: preset.orderText)
         _isRandom = State(initialValue: preset.isRandom)
+        _shuffle = State(initialValue: preset.shuffle)
+        _intervalValue = State(initialValue: preset.interval)
         _topSpeedValue = State(initialValue: preset.topSpeed)
         _bottomSpeedValue = State(initialValue: preset.bottomSpeed)
         _frequencyValue = State(initialValue: preset.frequency)
@@ -79,6 +83,15 @@ struct PresetEditorView: View {
             }
 
             Toggle("Random", isOn: $isRandom)
+            Toggle("Shuffle", isOn: $shuffle)
+
+            NavigationLink {
+                NumericAdjustView(title: "Interval", value: intervalValue, range: 0...120, step: 5) {
+                    intervalValue = $0
+                }
+            } label: {
+                numericRow(title: "Interval", value: intervalValue)
+            }
 
             if !error.isEmpty {
                 Text(error)
@@ -104,6 +117,8 @@ struct PresetEditorView: View {
                     p.name = name.isEmpty ? preset.name : name
                     p.order = parsed
                     p.isRandom = isRandom
+                    p.shuffle = shuffle
+                    p.interval = intervalValue
                     p.topSpeed = topSpeed
                     p.bottomSpeed = bottomSpeed
                     p.frequency = frequency
@@ -145,25 +160,23 @@ struct PresetEditorView: View {
     }
 
     private func parseOrder(_ text: String) throws -> [UInt8] {
-        let tokens = text
-            .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
-            .map(String.init)
-
+        let tokens = text.split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
         guard !tokens.isEmpty else {
             throw NSError(domain: "Preset", code: 1, userInfo: [NSLocalizedDescriptionKey: "Order cannot be empty"])
         }
-
-        var out: [UInt8] = []
-        for tok in tokens {
-            guard let n = Int(tok) else {
-                throw NSError(domain: "Preset", code: 2, userInfo: [NSLocalizedDescriptionKey: "Invalid token: \(tok)"])
-            }
-            guard (1...28).contains(n) else {
-                throw NSError(domain: "Preset", code: 3, userInfo: [NSLocalizedDescriptionKey: "Out of range: \(n), must be 1...28"])
-            }
-            out.append(UInt8(n))
+        guard tokens.count <= 28 else {
+            throw NSError(domain: "Preset", code: 2, userInfo: [NSLocalizedDescriptionKey: "Order count must be <= 28"])
         }
-        return out
+
+        let out = tokens
+            .compactMap { Int($0) }
+            .filter { (1...28).contains($0) }
+            .map(UInt8.init)
+
+        guard !out.isEmpty else {
+            throw NSError(domain: "Preset", code: 3, userInfo: [NSLocalizedDescriptionKey: "Order cannot be empty"])
+        }
+        return Array(out.prefix(28))
     }
 
     private func validate(_ v: Int, in range: ClosedRange<Int>, name: String) throws -> Int {
@@ -219,12 +232,12 @@ private struct OrderKeypadView: View {
             .frame(maxWidth: .infinity, minHeight: 54, maxHeight: 68)
 
             HStack(spacing: 4) {
-                Text("Position:")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                Text("\(candidate)")
-                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                Text("\(candidate) ")
+                    .font(.system(size: 24, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .foregroundStyle(.green)
+                Text(positionName(candidate))
+                    .font(.system(size: 19, weight: .semibold, design: .rounded))
                     .focusable()
                     .focused($crownFocused)
                     .digitalCrownRotation(
@@ -278,6 +291,15 @@ private struct OrderKeypadView: View {
 
     private var orderText: String {
         values.prefix(28).map(String.init).joined(separator: " ")
+    }
+
+    private func positionName(_ value: Int) -> String {
+        guard (1...28).contains(value) else { return "Unknown" }
+        let rows = ["前场", "中场", "后场", "底线"]
+        let lanes = ["左3", "左2", "左1", "中路", "右1", "右2", "右3"]
+        let rowIndex = (value - 1) / 7
+        let colIndex = (value - 1) % 7
+        return rows[rowIndex] + lanes[colIndex]
     }
 
     private func haptic(_ type: WKHapticType = .click) {

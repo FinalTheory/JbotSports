@@ -4,6 +4,9 @@ import Combine
 @MainActor
 final class ControlViewModel: ObservableObject {
     @Published var isStarted: Bool = false
+    @Published var randomRunInterval: Int = 30
+    @Published var isRandomRunActive: Bool = false
+    @Published var randomRunAlertMessage: String?
 
     @Published var topSpeed: Int = 60
     @Published var bottomSpeed: Int = 60
@@ -15,12 +18,24 @@ final class ControlViewModel: ObservableObject {
 
     private let ble: BLEManager
     private var spinAnchor: Int = 60
+    private let persistenceQueue = DispatchQueue(label: "tennis_ctl.presets.persistence", qos: .utility)
+    private var randomRunTimer: Timer?
+    private var randomCycleQueue: [UUID] = []
+    private var randomCycleIndex: Int = 0
 
     private static let presetsStorageKey = "tennis_ctl.presets"
 
     init(ble: BLEManager) {
         self.ble = ble
         self.presets = Self.loadPresets()
+        if let firstPreset = self.presets.first {
+            self.activePresetID = firstPreset.id
+            self.topSpeed = firstPreset.topSpeed
+            self.bottomSpeed = firstPreset.bottomSpeed
+            self.frequency = firstPreset.frequency
+            self.shortAngle = firstPreset.shortAngle
+            self.spinAnchor = anchorFor(top: firstPreset.topSpeed, bottom: firstPreset.bottomSpeed)
+        }
     }
 
     var spinValue: Int {
@@ -75,8 +90,11 @@ final class ControlViewModel: ObservableObject {
     func updatePreset(_ updated: Preset) {
         guard let idx = presets.firstIndex(where: { $0.id == updated.id }) else { return }
         let normalized = normalizedPreset(updated)
+        let changed = presets[idx] != normalized
         presets[idx] = normalized
-        persistPresets()
+        if changed {
+            persistPresets(presets)
+        }
 
         if activePresetID == normalized.id {
             applyPresetState(normalized)
@@ -84,24 +102,112 @@ final class ControlViewModel: ObservableObject {
     }
 
     func start() {
-        let preset = activePreset ?? presets.first
-        sendStart(order: preset?.order ?? [], random: preset?.isRandom ?? false, startFlag: 1)
+        stopRandomRunLoop()
+        guard let preset = activePreset else { return }
+        sendStart(order: preset.order, random: preset.isRandom, startFlag: 1)
         isStarted = true
     }
 
     func stop() {
+        stopRandomRunLoop()
         ble.send(TennisCommand.stopV6())
         isStarted = false
     }
 
+    func incRandomRunInterval() {
+        randomRunInterval = min(120, randomRunInterval + 5)
+    }
+
+    func decRandomRunInterval() {
+        randomRunInterval = max(10, randomRunInterval - 5)
+    }
+
+    func startRandomRun() {
+        stopRandomRunLoop()
+
+        let candidates = presets.filter(\.shuffle)
+        guard !candidates.isEmpty else {
+            randomRunAlertMessage = "No shuffle preset"
+            return
+        }
+
+        isRandomRunActive = true
+        rebuildRandomCycleQueue(from: candidates)
+        runCurrentRandomCyclePresetAndScheduleNext()
+    }
+
     func sendStartPreview() {
-        let preset = activePreset ?? presets.first
-        sendStart(order: preset?.order ?? [], random: preset?.isRandom ?? false, startFlag: 2)
+        guard let preset = activePreset else { return }
+        sendStart(order: preset.order, random: preset.isRandom, startFlag: 2)
     }
 
     private var activePreset: Preset? {
         guard let id = activePresetID else { return nil }
         return presets.first(where: { $0.id == id })
+    }
+
+    private func stopRandomRunLoop() {
+        randomRunTimer?.invalidate()
+        randomRunTimer = nil
+        isRandomRunActive = false
+    }
+
+    private func runCurrentRandomCyclePresetAndScheduleNext() {
+        guard isRandomRunActive else { return }
+
+        if randomCycleQueue.isEmpty {
+            rebuildRandomCycleQueue(from: presets.filter(\.shuffle))
+            guard !randomCycleQueue.isEmpty else {
+                stopRandomRunLoop()
+                randomRunAlertMessage = "No shuffle preset"
+                return
+            }
+        }
+
+        if randomCycleIndex >= randomCycleQueue.count {
+            rebuildRandomCycleQueue(from: presets.filter(\.shuffle))
+        }
+
+        guard randomCycleIndex < randomCycleQueue.count else {
+            stopRandomRunLoop()
+            randomRunAlertMessage = "No shuffle preset"
+            return
+        }
+
+        let presetID = randomCycleQueue[randomCycleIndex]
+        randomCycleIndex += 1
+        guard let preset = presets.first(where: { $0.id == presetID }) else {
+            runCurrentRandomCyclePresetAndScheduleNext()
+            return
+        }
+
+        activePresetID = preset.id
+        applyPresetState(preset)
+        sendPresetStart(preset)
+        scheduleRandomRunTick(after: effectiveInterval(for: preset))
+    }
+
+    private func scheduleRandomRunTick(after seconds: Int) {
+        randomRunTimer?.invalidate()
+        randomRunTimer = Timer.scheduledTimer(withTimeInterval: TimeInterval(seconds), repeats: false) { [weak self] _ in
+            guard let self else { return }
+            Task { @MainActor in
+                self.runCurrentRandomCyclePresetAndScheduleNext()
+            }
+        }
+    }
+
+    private func effectiveInterval(for preset: Preset) -> Int {
+        if preset.interval > 0 {
+            return preset.interval
+        }
+        return randomRunInterval
+    }
+
+    private func rebuildRandomCycleQueue(from candidates: [Preset]) {
+        let ids = candidates.map(\.id)
+        randomCycleQueue = ids.shuffled()
+        randomCycleIndex = 0
     }
 
     private func nearestAllowedSpin(to proposed: Int) -> Int {
@@ -149,6 +255,8 @@ final class ControlViewModel: ObservableObject {
         normalized.bottomSpeed = snapped(preset.bottomSpeed, step: 5, range: 0...100)
         normalized.frequency = snapped(preset.frequency, step: 1, range: 1...9)
         normalized.shortAngle = snapped(preset.shortAngle, step: 1, range: 6...60)
+        let snappedInterval = snapped(max(0, preset.interval), step: 5, range: 0...120)
+        normalized.interval = (snappedInterval == 0 || snappedInterval >= 10) ? snappedInterval : 10
 
         let spin = min(max(normalized.topSpeed - normalized.bottomSpeed, -50), 50)
         let anchor = anchorFor(top: normalized.topSpeed, spin: spin)
@@ -212,9 +320,16 @@ final class ControlViewModel: ObservableObject {
         ble.send(data)
     }
 
-    private func persistPresets() {
-        guard let data = try? JSONEncoder().encode(presets) else { return }
-        UserDefaults.standard.set(data, forKey: Self.presetsStorageKey)
+    private func sendPresetStart(_ preset: Preset) {
+        sendStart(order: preset.order, random: preset.isRandom, startFlag: 1)
+        isStarted = true
+    }
+
+    private func persistPresets(_ snapshots: [Preset]) {
+        persistenceQueue.async {
+            guard let data = try? JSONEncoder().encode(snapshots) else { return }
+            UserDefaults.standard.set(data, forKey: Self.presetsStorageKey)
+        }
     }
 
     private static func loadPresets() -> [Preset] {
@@ -230,10 +345,10 @@ final class ControlViewModel: ObservableObject {
 
     private static var defaultPresets: [Preset] {
         [
-            Preset(name: "后场定点", order: [25], isRandom: true, topSpeed: 65, bottomSpeed: 65, frequency: 7, shortAngle: 27),
-            Preset(name: "后场水平", order: [24, 25, 26], isRandom: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
-            Preset(name: "后场上旋", order: [24, 25, 26], isRandom: true, topSpeed: 85, bottomSpeed: 70, frequency: 7, shortAngle: 28),
-            Preset(name: "后场大范围", order: [23, 24, 25, 26, 27], isRandom: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
+            Preset(name: "后场定点", order: [25], isRandom: true, shuffle: true, topSpeed: 65, bottomSpeed: 65, frequency: 7, shortAngle: 27),
+            Preset(name: "后场水平", order: [24, 25, 26], isRandom: true, shuffle: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
+            Preset(name: "后场上旋", order: [24, 25, 26], isRandom: true, shuffle: true, topSpeed: 85, bottomSpeed: 70, frequency: 7, shortAngle: 28),
+            Preset(name: "后场大范围", order: [23, 24, 25, 26, 27], isRandom: true, shuffle: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
         ]
     }
 }

@@ -7,6 +7,7 @@ struct MainPagerView: View {
         TabView {
             Page1View(vm: vm)
             Page2View(vm: vm)
+            Page3RandomRunView(vm: vm)
             Page3View(vm: vm)
         }
         .tabViewStyle(.verticalPage)
