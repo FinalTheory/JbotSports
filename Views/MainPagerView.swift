@@ -10,5 +10,6 @@ struct MainPagerView: View {
             Page3View(vm: vm)
         }
         .tabViewStyle(.verticalPage)
+        .indexViewStyle(.page(backgroundDisplayMode: .never))
     }
 }

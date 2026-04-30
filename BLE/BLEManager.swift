@@ -3,8 +3,10 @@ import CoreBluetooth
 import Combine
 
 final class BLEManager: NSObject, ObservableObject {
-    @Published var discovered: [CBPeripheral] = []
-    @Published var connected: CBPeripheral?
+    @Published private(set) var discovered: [CBPeripheral] = []
+    @Published private(set) var connected: CBPeripheral?
+    @Published private(set) var connectingID: UUID?
+    @Published private(set) var isScanning: Bool = false
     @Published var isReady: Bool = false
     @Published var lastTxHex: String = ""
     @Published var lastRxHex: String = ""
@@ -12,6 +14,9 @@ final class BLEManager: NSObject, ObservableObject {
     private var central: CBCentralManager!
     private var writeChar: CBCharacteristic?
     private var notifyChar: CBCharacteristic?
+    private var discoveredByID: [UUID: CBPeripheral] = [:]
+    private var pendingConnection: CBPeripheral?
+    private var pendingCharacteristicServices: Set<CBUUID> = []
 
     private let serviceUUID = CBUUID(string: "0000FF10-0000-1000-8000-00805F9B34FB")
     private let writeUUID = CBUUID(string: "0000FF11-0000-1000-8000-00805F9B34FB")
@@ -24,23 +29,113 @@ final class BLEManager: NSObject, ObservableObject {
 
     func startScan() {
         guard central.state == .poweredOn else { return }
-        discovered.removeAll()
-        central.scanForPeripherals(withServices: nil, options: [CBCentralManagerScanOptionAllowDuplicatesKey: false])
+
+        central.stopScan()
+        isScanning = true
+
+        discoveredByID.removeAll()
+        if let current = connected {
+            discoveredByID[current.identifier] = current
+        }
+        publishDiscovered()
+
+        central.scanForPeripherals(
+            withServices: nil,
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+        )
     }
 
     func stopScan() {
         central.stopScan()
+        isScanning = false
     }
 
-    func connect(_ p: CBPeripheral) {
-        p.delegate = self
-        central.connect(p, options: nil)
+    func connect(_ peripheral: CBPeripheral) {
+        if connected?.identifier == peripheral.identifier && isReady {
+            discoveredByID[peripheral.identifier] = peripheral
+            publishDiscovered()
+            return
+        }
+
+        pendingConnection = peripheral
+        stopScan()
+
+        if let current = connected, current.identifier != peripheral.identifier {
+            central.cancelPeripheralConnection(current)
+            return
+        }
+
+        if let current = connected, current.identifier == peripheral.identifier {
+            connectingID = peripheral.identifier
+            isReady = false
+            writeChar = nil
+            notifyChar = nil
+            pendingCharacteristicServices.removeAll()
+            peripheral.delegate = self
+            peripheral.discoverServices([serviceUUID])
+            return
+        }
+
+        if let currentConnectingID = connectingID, currentConnectingID != peripheral.identifier {
+            if let currentConnecting = discoveredByID[currentConnectingID] {
+                central.cancelPeripheralConnection(currentConnecting)
+                return
+            }
+            connectingID = nil
+        }
+
+        beginConnection(to: peripheral)
     }
 
     func send(_ data: Data) {
-        guard let p = connected, let c = writeChar else { return }
+        guard let peripheral = connected, let characteristic = writeChar else { return }
         lastTxHex = TennisCommand.hex(data)
-        p.writeValue(data, for: c, type: .withResponse)
+        peripheral.writeValue(data, for: characteristic, type: .withResponse)
+    }
+
+    private func beginConnection(to peripheral: CBPeripheral) {
+        clearProtocolState()
+        connectingID = peripheral.identifier
+        discoveredByID[peripheral.identifier] = peripheral
+        publishDiscovered()
+
+        peripheral.delegate = self
+        central.connect(peripheral, options: nil)
+    }
+
+    private func clearProtocolState() {
+        writeChar = nil
+        notifyChar = nil
+        pendingCharacteristicServices.removeAll()
+        isReady = false
+        connected = nil
+    }
+
+    private func finishConnectionAttempt(resumeScan: Bool) {
+        connectingID = nil
+        pendingConnection = nil
+        if resumeScan {
+            startScan()
+        }
+    }
+
+    private func publishDiscovered() {
+        discovered = discoveredByID.values.sorted { lhs, rhs in
+            let lhsConnected = lhs.identifier == connected?.identifier
+            let rhsConnected = rhs.identifier == connected?.identifier
+
+            if lhsConnected != rhsConnected {
+                return lhsConnected
+            }
+
+            let lhsName = lhs.name ?? ""
+            let rhsName = rhs.name ?? ""
+            if lhsName != rhsName {
+                return lhsName.localizedCaseInsensitiveCompare(rhsName) == .orderedAscending
+            }
+
+            return lhs.identifier.uuidString < rhs.identifier.uuidString
+        }
     }
 }
 
@@ -48,52 +143,114 @@ extension BLEManager: CBCentralManagerDelegate {
     func centralManagerDidUpdateState(_ central: CBCentralManager) {
         if central.state == .poweredOn {
             startScan()
+        } else {
+            stopScan()
+            clearProtocolState()
+            discoveredByID.removeAll()
+            publishDiscovered()
         }
     }
 
     func centralManager(_ central: CBCentralManager, didDiscover peripheral: CBPeripheral, advertisementData: [String : Any], rssi RSSI: NSNumber) {
         guard let name = peripheral.name, !name.isEmpty else { return }
-        if !discovered.contains(where: { $0.identifier == peripheral.identifier }) {
-            discovered.append(peripheral)
-        }
+        discoveredByID[peripheral.identifier] = peripheral
+        publishDiscovered()
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        connectingID = nil
         connected = peripheral
-        isReady = false
+        discoveredByID[peripheral.identifier] = peripheral
+        publishDiscovered()
+
+        peripheral.delegate = self
         peripheral.discoverServices([serviceUUID])
     }
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
-        connected = nil
-        writeChar = nil
-        notifyChar = nil
-        isReady = false
+        let next = pendingConnection
+        let shouldResumeScan = next == nil
+
+        if connected?.identifier == peripheral.identifier {
+            clearProtocolState()
+        }
+        if connectingID == peripheral.identifier {
+            connectingID = nil
+        }
+
+        if let next, next.identifier != peripheral.identifier {
+            pendingConnection = nil
+            beginConnection(to: next)
+            return
+        }
+
+        finishConnectionAttempt(resumeScan: shouldResumeScan)
+    }
+
+    func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
+        if connectingID == peripheral.identifier {
+            connectingID = nil
+        }
+        if pendingConnection?.identifier == peripheral.identifier {
+            pendingConnection = nil
+        }
+        startScan()
     }
 }
 
 extension BLEManager: CBPeripheralDelegate {
     func peripheral(_ peripheral: CBPeripheral, didDiscoverServices error: Error?) {
-        guard let services = peripheral.services else { return }
-        for s in services where s.uuid == serviceUUID {
-            peripheral.discoverCharacteristics([writeUUID, notifyUUID], for: s)
+        guard error == nil, let services = peripheral.services else {
+            central.cancelPeripheralConnection(peripheral)
+            return
+        }
+
+        if let targetService = services.first(where: { $0.uuid == serviceUUID }) {
+            pendingCharacteristicServices = [targetService.uuid]
+            peripheral.discoverCharacteristics([writeUUID, notifyUUID], for: targetService)
+            return
+        }
+
+        pendingCharacteristicServices = Set(services.map(\.uuid))
+        for service in services {
+            peripheral.discoverCharacteristics(nil, for: service)
         }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didDiscoverCharacteristicsFor service: CBService, error: Error?) {
-        guard let chars = service.characteristics else { return }
-        for c in chars {
-            if c.uuid == writeUUID { writeChar = c }
-            if c.uuid == notifyUUID {
-                notifyChar = c
-                peripheral.setNotifyValue(true, for: c)
+        guard error == nil, let chars = service.characteristics else {
+            pendingCharacteristicServices.remove(service.uuid)
+            if pendingCharacteristicServices.isEmpty && !isReady {
+                central.cancelPeripheralConnection(peripheral)
+            }
+            return
+        }
+
+        for characteristic in chars {
+            if characteristic.uuid == writeUUID {
+                writeChar = characteristic
+            }
+            if characteristic.uuid == notifyUUID {
+                notifyChar = characteristic
+                peripheral.setNotifyValue(true, for: characteristic)
             }
         }
+
+        pendingCharacteristicServices.remove(service.uuid)
         isReady = (writeChar != nil && notifyChar != nil)
+        if isReady {
+            pendingConnection = nil
+            stopScan()
+            connected = peripheral
+            discoveredByID[peripheral.identifier] = peripheral
+            publishDiscovered()
+        } else if pendingCharacteristicServices.isEmpty {
+            central.cancelPeripheralConnection(peripheral)
+        }
     }
 
     func peripheral(_ peripheral: CBPeripheral, didUpdateValueFor characteristic: CBCharacteristic, error: Error?) {
-        guard let d = characteristic.value else { return }
-        lastRxHex = TennisCommand.hex(d)
+        guard let data = characteristic.value else { return }
+        lastRxHex = TennisCommand.hex(data)
     }
 }

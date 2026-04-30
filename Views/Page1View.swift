@@ -12,13 +12,13 @@ struct Page1View: View {
             .frame(maxHeight: .infinity)
 
             HStack(spacing: 8) {
-                Button("FREQ+") { vm.incFrequency() }
+                Button("FREQ-") { vm.decFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
                 Text("\(vm.frequency)")
                     .font(.headline)
                     .frame(minWidth: 28)
-                Button("FREQ-") { vm.decFrequency() }
+                Button("FREQ+") { vm.incFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
             }

@@ -14,11 +14,11 @@ struct Preset: Identifiable, Equatable, Codable {
         id: UUID = UUID(),
         name: String,
         order: [UInt8],
-        isRandom: Bool = false,
+        isRandom: Bool = true,
         topSpeed: Int = 60,
         bottomSpeed: Int = 60,
-        frequency: Int = 5,
-        shortAngle: Int = 26
+        frequency: Int = 7,
+        shortAngle: Int = 27
     ) {
         self.id = id
         self.name = name

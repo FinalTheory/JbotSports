@@ -14,9 +14,12 @@ struct PairingView: View {
                         HStack {
                             Text(p.name ?? "Unknown")
                             Spacer()
-                            if ble.connected?.identifier == p.identifier {
+                            if ble.connected?.identifier == p.identifier && ble.isReady {
                                 Image(systemName: "checkmark.circle.fill")
                                     .foregroundStyle(.green)
+                            } else if ble.connectingID == p.identifier {
+                                ProgressView()
+                                    .controlSize(.mini)
                             }
                         }
                     }
@@ -24,7 +27,7 @@ struct PairingView: View {
             }
 
             Section {
-                Button("Rescan") { ble.startScan() }
+                Button(ble.isScanning ? "Scanning..." : "Rescan") { ble.startScan() }
             }
         }
         .navigationTitle("Pair")

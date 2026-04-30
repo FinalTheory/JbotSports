@@ -23,8 +23,7 @@ struct Page2View: View {
                     .buttonStyle(.bordered)
                 VStack(spacing: 2) {
                     Text("H:\(vm.shortAngle)")
-                    Text("Spin:\(vm.spinValue)")
-                        .font(.footnote)
+                    Text("S:\(vm.spinValue)")
                 }
                 .font(.headline)
                 .frame(minWidth: 52)
