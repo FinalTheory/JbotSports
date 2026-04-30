@@ -2,6 +2,7 @@ import SwiftUI
 
 @main
 struct TennisCtlWatchApp: App {
+    @Environment(\.scenePhase) private var scenePhase
     @StateObject private var ble: BLEManager
     @StateObject private var vm: ControlViewModel
 
@@ -30,6 +31,16 @@ struct TennisCtlWatchApp: App {
                             .buttonStyle(.plain)
                         }
                     }
+            }
+            .onChange(of: scenePhase) { phase in
+                switch phase {
+                case .background:
+                    ble.prepareForBackground()
+                case .active:
+                    ble.resumeConnectionAfterForeground(timeout: 3.0)
+                default:
+                    break
+                }
             }
         }
     }

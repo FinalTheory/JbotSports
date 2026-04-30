@@ -17,6 +17,8 @@ final class BLEManager: NSObject, ObservableObject {
     private var discoveredByID: [UUID: CBPeripheral] = [:]
     private var pendingConnection: CBPeripheral?
     private var pendingCharacteristicServices: Set<CBUUID> = []
+    private var preSuspendPeripheralID: UUID?
+    private var resumeTimeoutWorkItem: DispatchWorkItem?
 
     private let serviceUUID = CBUUID(string: BLEConstants.UUIDs.service)
     private let writeUUID = CBUUID(string: BLEConstants.UUIDs.write)
@@ -93,6 +95,51 @@ final class BLEManager: NSObject, ObservableObject {
         peripheral.writeValue(data, for: characteristic, type: .withResponse)
     }
 
+    func prepareForBackground() {
+        preSuspendPeripheralID = connected?.identifier ?? preSuspendPeripheralID
+    }
+
+    func resumeConnectionAfterForeground(timeout: TimeInterval = 3.0) {
+        cancelResumeTimeout()
+        guard central.state == .poweredOn else {
+            resetToInitialState()
+            return
+        }
+        guard let targetID = preSuspendPeripheralID else {
+            startScan()
+            return
+        }
+
+        // Already recovered.
+        if connected?.identifier == targetID && isReady {
+            return
+        }
+
+        // Try connecting from known cache first; if missing, ask CoreBluetooth cache.
+        let targetPeripheral: CBPeripheral?
+        if let cached = discoveredByID[targetID] {
+            targetPeripheral = cached
+        } else {
+            targetPeripheral = central.retrievePeripherals(withIdentifiers: [targetID]).first
+        }
+
+        if let peripheral = targetPeripheral {
+            connect(peripheral)
+        } else {
+            startScan()
+        }
+
+        let timeoutItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            let recovered = (self.connected?.identifier == targetID && self.isReady)
+            if !recovered {
+                self.resetToInitialState()
+            }
+        }
+        resumeTimeoutWorkItem = timeoutItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + timeout, execute: timeoutItem)
+    }
+
     private func beginConnection(to peripheral: CBPeripheral) {
         clearProtocolState()
         connectingID = peripheral.identifier
@@ -109,6 +156,24 @@ final class BLEManager: NSObject, ObservableObject {
         pendingCharacteristicServices.removeAll()
         isReady = false
         connected = nil
+    }
+
+    private func cancelResumeTimeout() {
+        resumeTimeoutWorkItem?.cancel()
+        resumeTimeoutWorkItem = nil
+    }
+
+    private func resetToInitialState() {
+        cancelResumeTimeout()
+        if let current = connected {
+            central.cancelPeripheralConnection(current)
+        }
+        clearProtocolState()
+        connectingID = nil
+        pendingConnection = nil
+        discoveredByID.removeAll()
+        publishDiscovered()
+        startScan()
     }
 
     private func finishConnectionAttempt(resumeScan: Bool) {
@@ -165,6 +230,7 @@ extension BLEManager: CBCentralManagerDelegate {
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
         connectingID = nil
         connected = peripheral
+        preSuspendPeripheralID = peripheral.identifier
         discoveredByID[peripheral.identifier] = peripheral
         publishDiscovered()
 
@@ -235,6 +301,7 @@ extension BLEManager: CBPeripheralDelegate {
         pendingCharacteristicServices.remove(service.uuid)
         isReady = (writeChar != nil && notifyChar != nil)
         if isReady {
+            cancelResumeTimeout()
             pendingConnection = nil
             stopScan()
             connected = peripheral
