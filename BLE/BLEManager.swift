@@ -18,9 +18,9 @@ final class BLEManager: NSObject, ObservableObject {
     private var pendingConnection: CBPeripheral?
     private var pendingCharacteristicServices: Set<CBUUID> = []
 
-    private let serviceUUID = CBUUID(string: "0000FF10-0000-1000-8000-00805F9B34FB")
-    private let writeUUID = CBUUID(string: "0000FF11-0000-1000-8000-00805F9B34FB")
-    private let notifyUUID = CBUUID(string: "0000FF12-0000-1000-8000-00805F9B34FB")
+    private let serviceUUID = CBUUID(string: BLEConstants.UUIDs.service)
+    private let writeUUID = CBUUID(string: BLEConstants.UUIDs.write)
+    private let notifyUUID = CBUUID(string: BLEConstants.UUIDs.notify)
 
     override init() {
         super.init()

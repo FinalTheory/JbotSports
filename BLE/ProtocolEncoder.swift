@@ -1,13 +1,30 @@
 import Foundation
 
-enum TennisCommand {
-    static let head: [UInt8] = [0x7E, 0x3A]
-    static let tail: [UInt8] = [0x0D, 0x0A]
+enum BLEConstants {
+    enum UUIDs {
+        static let service = "0000FF10-0000-1000-8000-00805F9B34FB"
+        static let write = "0000FF11-0000-1000-8000-00805F9B34FB"
+        static let notify = "0000FF12-0000-1000-8000-00805F9B34FB"
+    }
 
-    static let start6: [UInt8] = [0x07, 0x22]
-    static let stop: [UInt8] = [0x06, 0x01]
-    static let frequency: [UInt8] = [0x03, 0x01]
-    static let shortAngle: [UInt8] = [0x04, 0x01]
+    enum Packet {
+        static let head: [UInt8] = [0x7E, 0x3A]
+        static let tail: [UInt8] = [0x0D, 0x0A]
+        static let start6: [UInt8] = [0x07, 0x22]
+        static let stop: [UInt8] = [0x06, 0x01]
+        static let frequency: [UInt8] = [0x03, 0x01]
+        static let shortAngle: [UInt8] = [0x04, 0x01]
+    }
+}
+
+enum TennisCommand {
+    static let head = BLEConstants.Packet.head
+    static let tail = BLEConstants.Packet.tail
+
+    static let start6 = BLEConstants.Packet.start6
+    static let stop = BLEConstants.Packet.stop
+    static let frequency = BLEConstants.Packet.frequency
+    static let shortAngle = BLEConstants.Packet.shortAngle
 
     static func packet(cmd: [UInt8], data: [UInt8]) -> Data {
         var bytes: [UInt8] = []

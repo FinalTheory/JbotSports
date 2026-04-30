@@ -20,9 +20,14 @@ struct TennisCtlWatchApp: App {
                             NavigationLink {
                                 PairingView(ble: ble)
                             } label: {
-                                Image(systemName: "dot.radiowaves.left.and.right")
-                                    .font(.system(size: 11, weight: .regular))
+                                Text("Pair")
+                                    .font(.system(size: 16, weight: .semibold))
+                                    .padding(.horizontal, 6)
+                                    .padding(.vertical, 2)
+                                    .background(Color.white.opacity(0.14))
+                                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
                             }
+                            .buttonStyle(.plain)
                         }
                     }
             }
