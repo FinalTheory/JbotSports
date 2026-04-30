@@ -1,4 +1,5 @@
 import SwiftUI
+import WatchKit
 
 struct PresetEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -30,7 +31,20 @@ struct PresetEditorView: View {
     var body: some View {
         Form {
             TextField("Name", text: $name)
-            TextField("Order: 1 2 3", text: $orderText)
+            NavigationLink {
+                OrderKeypadView(value: orderText) {
+                    orderText = $0
+                }
+            } label: {
+                HStack {
+                    Text("Order")
+                    Spacer()
+                    Text(orderPreview)
+                        .font(.caption2)
+                        .lineLimit(1)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             NavigationLink {
                 NumericAdjustView(title: "Top Speed", value: topSpeedValue, range: 0...100, step: 5) {
@@ -114,6 +128,10 @@ struct PresetEditorView: View {
         .navigationTitle("Edit Preset")
     }
 
+    private var orderPreview: String {
+        orderText.isEmpty ? "Tap to edit" : orderText
+    }
+
     private func numericRow(title: String, value: Int) -> some View {
         HStack {
             Text(title)
@@ -157,6 +175,113 @@ struct PresetEditorView: View {
             )
         }
         return v
+    }
+}
+
+private struct OrderKeypadView: View {
+    @Environment(\.dismiss) private var dismiss
+    let onSave: (String) -> Void
+    @State private var values: [Int]
+    @State private var candidate: Int
+    @FocusState private var crownFocused: Bool
+
+    init(value: String, onSave: @escaping (String) -> Void) {
+        self.onSave = onSave
+        let parsed = value
+            .split(whereSeparator: { $0 == " " || $0 == "\n" || $0 == "\t" })
+            .compactMap { Int($0) }
+            .filter { (1...28).contains($0) }
+        _values = State(initialValue: Array(parsed.prefix(28)))
+        _candidate = State(initialValue: parsed.last ?? 1)
+    }
+
+    var body: some View {
+        VStack(spacing: 8) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    Text(orderText.isEmpty ? "No points" : orderText)
+                        .font(.headline)
+                        .multilineTextAlignment(.leading)
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                    Color.clear
+                        .frame(height: 1)
+                        .id("order-bottom")
+                }
+                .onAppear {
+                    proxy.scrollTo("order-bottom", anchor: .bottom)
+                }
+                .onChange(of: orderText) { _ in
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        proxy.scrollTo("order-bottom", anchor: .bottom)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, minHeight: 54, maxHeight: 68)
+
+            HStack(spacing: 4) {
+                Text("Position:")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                Text("\(candidate)")
+                    .font(.system(size: 26, weight: .semibold, design: .rounded))
+                    .monospacedDigit()
+                    .focusable()
+                    .focused($crownFocused)
+                    .digitalCrownRotation(
+                        Binding(
+                            get: { Double(candidate) },
+                            set: { candidate = Int($0.rounded()) }
+                        ),
+                        from: 1,
+                        through: 28,
+                        by: 1,
+                        sensitivity: .medium,
+                        isContinuous: false,
+                        isHapticFeedbackEnabled: true
+                    )
+            }
+            .frame(maxWidth: .infinity, minHeight: 34)
+
+            HStack(spacing: 8) {
+                Button("Add") {
+                    guard values.count < 28 else { return }
+                    values.append(candidate)
+                    haptic()
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+
+                Button("Del") {
+                    if !values.isEmpty {
+                        _ = values.removeLast()
+                        haptic()
+                    }
+                }
+                .buttonStyle(.bordered)
+                .frame(maxWidth: .infinity)
+
+                Button("Save") {
+                    haptic()
+                    onSave(orderText)
+                    dismiss()
+                }
+                .buttonStyle(.borderedProminent)
+                .frame(maxWidth: .infinity)
+            }
+        }
+        .padding(6)
+        .onAppear {
+            crownFocused = true
+        }
+        .navigationTitle("Order")
+    }
+
+    private var orderText: String {
+        values.prefix(28).map(String.init).joined(separator: " ")
+    }
+
+    private func haptic(_ type: WKHapticType = .click) {
+        WKInterfaceDevice.current().play(type)
     }
 }
 

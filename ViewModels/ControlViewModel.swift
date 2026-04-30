@@ -225,10 +225,10 @@ final class ControlViewModel: ObservableObject {
 
     private static var defaultPresets: [Preset] {
         [
-            Preset(name: "Single A", order: [3, 3, 3, 3], isRandom: false, topSpeed: 60, bottomSpeed: 60, frequency: 4, shortAngle: 26),
-            Preset(name: "Cross 1", order: [1, 5, 2, 4], isRandom: false, topSpeed: 70, bottomSpeed: 60, frequency: 5, shortAngle: 30),
-            Preset(name: "Deep Mix", order: [20, 22, 24, 26, 28], isRandom: true, topSpeed: 75, bottomSpeed: 65, frequency: 4, shortAngle: 34),
-            Preset(name: "Volley", order: [8, 11, 14, 17], isRandom: false, topSpeed: 55, bottomSpeed: 45, frequency: 6, shortAngle: 18)
+            Preset(name: "后场定点", order: [25], isRandom: true, topSpeed: 65, bottomSpeed: 65, frequency: 7, shortAngle: 27),
+            Preset(name: "后场水平", order: [24, 25, 26], isRandom: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
+            Preset(name: "后场上旋", order: [24, 25, 26], isRandom: true, topSpeed: 85, bottomSpeed: 70, frequency: 7, shortAngle: 28),
+            Preset(name: "后场大范围", order: [23, 24, 25, 26, 27], isRandom: true, topSpeed: 75, bottomSpeed: 75, frequency: 7, shortAngle: 26),
         ]
     }
 }
