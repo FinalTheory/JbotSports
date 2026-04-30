@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct TennisCtlWatchApp: App {
-    @StateObject private var ble = BLEManager()
+    @StateObject private var ble: BLEManager
     @StateObject private var vm: ControlViewModel
 
     init() {

@@ -44,47 +44,27 @@ final class ControlViewModel: ObservableObject {
     }
 
     func incFrequency() {
-        let updated = min(9, frequency + 1)
-        guard updated != frequency else { return }
-        frequency = updated
-        ble.send(TennisCommand.setFrequency(UInt8(frequency)))
+        updateFrequency(by: 1)
     }
 
     func decFrequency() {
-        let updated = max(1, frequency - 1)
-        guard updated != frequency else { return }
-        frequency = updated
-        ble.send(TennisCommand.setFrequency(UInt8(frequency)))
+        updateFrequency(by: -1)
     }
 
     func incHeight() {
-        let updated = min(60, shortAngle + 1)
-        guard updated != shortAngle else { return }
-        shortAngle = updated
-        ble.send(TennisCommand.setShortAngle(UInt8(shortAngle)))
+        updateShortAngle(by: 1)
     }
 
     func decHeight() {
-        let updated = max(6, shortAngle - 1)
-        guard updated != shortAngle else { return }
-        shortAngle = updated
-        ble.send(TennisCommand.setShortAngle(UInt8(shortAngle)))
+        updateShortAngle(by: -1)
     }
 
     func incOverallSpeed() {
-        guard topSpeed <= 95, bottomSpeed <= 95 else { return }
-        topSpeed += 5
-        bottomSpeed += 5
-        spinAnchor += 5
-        sendStartPreview()
+        adjustOverallSpeed(by: 5)
     }
 
     func decOverallSpeed() {
-        guard topSpeed >= 5, bottomSpeed >= 5 else { return }
-        topSpeed -= 5
-        bottomSpeed -= 5
-        spinAnchor -= 5
-        sendStartPreview()
+        adjustOverallSpeed(by: -5)
     }
 
     func selectPreset(_ preset: Preset) {
@@ -127,6 +107,31 @@ final class ControlViewModel: ObservableObject {
     private func nearestAllowedSpin(to proposed: Int) -> Int {
         guard !allowedSpinValues.isEmpty else { return 0 }
         return allowedSpinValues.min(by: { abs($0 - proposed) < abs($1 - proposed) }) ?? 0
+    }
+
+    private func updateFrequency(by delta: Int) {
+        let updated = min(max(frequency + delta, 1), 9)
+        guard updated != frequency else { return }
+        frequency = updated
+        ble.send(TennisCommand.setFrequency(UInt8(frequency)))
+    }
+
+    private func updateShortAngle(by delta: Int) {
+        let updated = min(max(shortAngle + delta, 6), 60)
+        guard updated != shortAngle else { return }
+        shortAngle = updated
+        ble.send(TennisCommand.setShortAngle(UInt8(shortAngle)))
+    }
+
+    private func adjustOverallSpeed(by delta: Int) {
+        let updatedTop = topSpeed + delta
+        let updatedBottom = bottomSpeed + delta
+        guard (0...100).contains(updatedTop), (0...100).contains(updatedBottom) else { return }
+
+        topSpeed = updatedTop
+        bottomSpeed = updatedBottom
+        spinAnchor += delta
+        sendStartPreview()
     }
 
     private func applyPresetState(_ preset: Preset) {

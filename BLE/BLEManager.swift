@@ -119,6 +119,11 @@ final class BLEManager: NSObject, ObservableObject {
         }
     }
 
+    private func failCurrentAttempt(resumeScan: Bool = true) {
+        clearProtocolState()
+        finishConnectionAttempt(resumeScan: resumeScan)
+    }
+
     private func publishDiscovered() {
         discovered = discoveredByID.values.sorted { lhs, rhs in
             let lhsConnected = lhs.identifier == connected?.identifier
@@ -169,14 +174,11 @@ extension BLEManager: CBCentralManagerDelegate {
 
     func centralManager(_ central: CBCentralManager, didDisconnectPeripheral peripheral: CBPeripheral, error: Error?) {
         let next = pendingConnection
-        let shouldResumeScan = next == nil
+        let shouldRetryNext = next != nil && next?.identifier != peripheral.identifier
+        let shouldResumeScan = !shouldRetryNext
 
-        if connected?.identifier == peripheral.identifier {
-            clearProtocolState()
-        }
-        if connectingID == peripheral.identifier {
-            connectingID = nil
-        }
+        clearProtocolState()
+        connectingID = nil
 
         if let next, next.identifier != peripheral.identifier {
             pendingConnection = nil
@@ -188,13 +190,7 @@ extension BLEManager: CBCentralManagerDelegate {
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
-        if connectingID == peripheral.identifier {
-            connectingID = nil
-        }
-        if pendingConnection?.identifier == peripheral.identifier {
-            pendingConnection = nil
-        }
-        startScan()
+        failCurrentAttempt()
     }
 }
 
