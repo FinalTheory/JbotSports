@@ -1,0 +1,33 @@
+name: tennis_ctl
+options:
+  bundleIdPrefix: me.finaltheory
+  deploymentTarget:
+    watchOS: '10.0'
+settings:
+  base:
+    SWIFT_VERSION: 5.0
+    PRODUCT_NAME: tennis_ctl
+
+configs:
+  Debug: debug
+  Release: release
+
+targets:
+  tennis_ctl Watch App:
+    type: application
+    platform: watchOS
+    sources:
+      - path: .
+        excludes:
+          - README.md
+          - project.yml
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: me.finaltheory.tennisctl.watchapp
+        PRODUCT_NAME: tennis_ctl
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: tennis_ctl
+        INFOPLIST_KEY_CFBundleName: tennis_ctl
+        INFOPLIST_KEY_WKApplication: YES
+        INFOPLIST_KEY_WKWatchOnly: YES
+        INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Need Bluetooth to connect tennis machine.
