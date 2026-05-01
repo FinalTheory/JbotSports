@@ -61,7 +61,7 @@ struct PresetEditorView: View {
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Top Speed", value: topSpeedValue, range: 0...100, step: 5) {
+                NumericAdjustView(title: "Top Speed", value: topSpeedValue, range: 30...100, step: 5) {
                     topSpeedValue = $0
                 }
             } label: {
@@ -69,7 +69,7 @@ struct PresetEditorView: View {
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Bottom Speed", value: bottomSpeedValue, range: 0...100, step: 5) {
+                NumericAdjustView(title: "Bottom Speed", value: bottomSpeedValue, range: 30...100, step: 5) {
                     bottomSpeedValue = $0
                 }
             } label: {
@@ -85,7 +85,7 @@ struct PresetEditorView: View {
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Height", value: shortAngleValue, range: 6...60) {
+                NumericAdjustView(title: "Height", value: shortAngleValue, range: 12...60) {
                     shortAngleValue = $0
                 }
             } label: {
@@ -112,10 +112,10 @@ struct PresetEditorView: View {
             Button {
                 do {
                     let parsed = try parseOrder(orderText)
-                    let topSpeed = try validate(topSpeedValue, in: 0...100, name: "Top Speed")
-                    let bottomSpeed = try validate(bottomSpeedValue, in: 0...100, name: "Bottom Speed")
+                    let topSpeed = try validate(topSpeedValue, in: 30...100, name: "Top Speed")
+                    let bottomSpeed = try validate(bottomSpeedValue, in: 30...100, name: "Bottom Speed")
                     let frequency = try validate(frequencyValue, in: 1...9, name: "Frequency")
-                    let shortAngle = try validate(shortAngleValue, in: 6...60, name: "Short Angle")
+                    let shortAngle = try validate(shortAngleValue, in: 12...60, name: "Short Angle")
                     guard abs(topSpeed - bottomSpeed) <= 50 else {
                         throw NSError(
                             domain: "Preset",

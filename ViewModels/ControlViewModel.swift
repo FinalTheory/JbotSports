@@ -43,7 +43,7 @@ final class ControlViewModel: ObservableObject {
     var allowedSpinValues: [Int] {
         stride(from: -50, through: 50, by: 5).filter { spin in
             let speeds = resolvedSpeeds(anchor: spinAnchor, spin: spin)
-            return (0...100).contains(speeds.top) && (0...100).contains(speeds.bottom)
+            return (30...100).contains(speeds.top) && (30...100).contains(speeds.bottom)
         }
     }
 
@@ -240,7 +240,7 @@ final class ControlViewModel: ObservableObject {
     }
 
     private func updateShortAngle(by delta: Int) {
-        let updated = min(max(shortAngle + delta, 6), 60)
+        let updated = min(max(shortAngle + delta, 12), 60)
         guard updated != shortAngle else { return }
         shortAngle = updated
         ble.send(TennisCommand.setShortAngle(UInt8(shortAngle)))
@@ -249,7 +249,7 @@ final class ControlViewModel: ObservableObject {
     private func adjustOverallSpeed(by delta: Int) {
         let updatedTop = topSpeed + delta
         let updatedBottom = bottomSpeed + delta
-        guard (0...100).contains(updatedTop), (0...100).contains(updatedBottom) else { return }
+        guard (30...100).contains(updatedTop), (30...100).contains(updatedBottom) else { return }
 
         topSpeed = updatedTop
         bottomSpeed = updatedBottom
@@ -268,10 +268,10 @@ final class ControlViewModel: ObservableObject {
 
     private func normalizedPreset(_ preset: Preset) -> Preset {
         var normalized = preset
-        normalized.topSpeed = snapped(preset.topSpeed, step: 5, range: 0...100)
-        normalized.bottomSpeed = snapped(preset.bottomSpeed, step: 5, range: 0...100)
+        normalized.topSpeed = snapped(preset.topSpeed, step: 5, range: 30...100)
+        normalized.bottomSpeed = snapped(preset.bottomSpeed, step: 5, range: 30...100)
         normalized.frequency = snapped(preset.frequency, step: 1, range: 1...9)
-        normalized.shortAngle = snapped(preset.shortAngle, step: 1, range: 6...60)
+        normalized.shortAngle = snapped(preset.shortAngle, step: 1, range: 12...60)
         let snappedInterval = snapped(max(0, preset.interval), step: 5, range: 0...120)
         normalized.interval = (snappedInterval == 0 || snappedInterval >= 10) ? snappedInterval : 10
 
