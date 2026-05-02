@@ -5,10 +5,10 @@ struct MainPagerView: View {
 
     var body: some View {
         TabView {
-            Page1View(vm: vm)
-            Page2View(vm: vm)
-            Page3RandomRunView(vm: vm)
-            Page3View(vm: vm)
+            MainControllerView(vm: vm)
+            DetailControllerView(vm: vm)
+            RandomShuffleControllerView(vm: vm)
+            PresetView(vm: vm)
         }
         .tabViewStyle(.verticalPage)
         .indexViewStyle(.page(backgroundDisplayMode: .never))

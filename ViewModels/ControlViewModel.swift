@@ -3,9 +3,13 @@ import Combine
 
 @MainActor
 final class ControlViewModel: ObservableObject {
-    @Published var randomRunInterval: Int = 30
+    @Published var randomRunInterval: Int = 20
+    @Published var randomRunInitialIntervalSeconds: Int = 20
+    @Published var randomRunStartDelaySeconds: Int = 8
+    @Published var debugEnabled: Bool = false
     @Published var isRandomRunActive: Bool = false
     @Published var randomRunAlertMessage: String?
+    @Published var flashHint: String = ""
 
     @Published var topSpeed: Int = 60
     @Published var bottomSpeed: Int = 60
@@ -20,12 +24,23 @@ final class ControlViewModel: ObservableObject {
     private var randomRunTimer: Timer?
     private var randomCycleQueue: [UUID] = []
     private var randomCycleIndex: Int = 0
+    private var randomRunNeedsInitialDelay: Bool = false
 
     private static let presetsStorageKey = "tennis_ctl.presets"
+    private static let randomRunInitialIntervalStorageKey = "tennis_ctl.random_run_initial_interval"
+    private static let randomRunStartDelayStorageKey = "tennis_ctl.random_run_start_delay"
+    private static let debugEnabledStorageKey = "tennis_ctl.debug_enabled"
 
     init(ble: BLEManager) {
         self.ble = ble
         self.presets = Self.loadPresets()
+        let storedInitialInterval = UserDefaults.standard.integer(forKey: Self.randomRunInitialIntervalStorageKey)
+        let initialInterval = storedInitialInterval == 0 ? 20 : storedInitialInterval
+        self.randomRunInitialIntervalSeconds = initialInterval
+        self.randomRunInterval = initialInterval
+        let storedDelay = UserDefaults.standard.integer(forKey: Self.randomRunStartDelayStorageKey)
+        self.randomRunStartDelaySeconds = storedDelay == 0 ? 8 : storedDelay
+        self.debugEnabled = UserDefaults.standard.bool(forKey: Self.debugEnabledStorageKey)
         if let firstPreset = self.presets.first {
             self.activePresetID = firstPreset.id
             self.topSpeed = firstPreset.topSpeed
@@ -80,9 +95,18 @@ final class ControlViewModel: ObservableObject {
         adjustOverallSpeed(by: -5)
     }
 
+    func fineTuneLeft() {
+        ble.send(TennisCommand.fineTune(2))
+    }
+
+    func fineTuneRight() {
+        ble.send(TennisCommand.fineTune(1))
+    }
+
     func selectPreset(_ preset: Preset) {
         activePresetID = preset.id
         applyPresetState(preset)
+        flashHint = "PRESET \(preset.name)"
     }
 
     func updatePreset(_ updated: Preset) {
@@ -149,8 +173,28 @@ final class ControlViewModel: ObservableObject {
         }
 
         isRandomRunActive = true
+        randomRunNeedsInitialDelay = true
         rebuildRandomCycleQueue(from: candidates)
         runCurrentRandomCyclePresetAndScheduleNext()
+    }
+
+    func setRandomRunStartDelay(seconds: Int) {
+        guard seconds != randomRunStartDelaySeconds else { return }
+        randomRunStartDelaySeconds = seconds
+        UserDefaults.standard.set(seconds, forKey: Self.randomRunStartDelayStorageKey)
+    }
+
+    func setRandomRunInitialInterval(seconds: Int) {
+        guard seconds != randomRunInitialIntervalSeconds else { return }
+        randomRunInitialIntervalSeconds = seconds
+        randomRunInterval = seconds
+        UserDefaults.standard.set(seconds, forKey: Self.randomRunInitialIntervalStorageKey)
+    }
+
+    func setDebugEnabled(_ enabled: Bool) {
+        guard enabled != debugEnabled else { return }
+        debugEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.debugEnabledStorageKey)
     }
 
     func sendStartPreview() {
@@ -167,6 +211,7 @@ final class ControlViewModel: ObservableObject {
         randomRunTimer?.invalidate()
         randomRunTimer = nil
         isRandomRunActive = false
+        randomRunNeedsInitialDelay = false
     }
 
     private func runCurrentRandomCyclePresetAndScheduleNext() {
@@ -200,8 +245,14 @@ final class ControlViewModel: ObservableObject {
 
         activePresetID = preset.id
         applyPresetState(preset)
+        flashHint = "PRESET \(preset.name)"
         sendPresetStart(preset)
-        scheduleRandomRunTick(after: effectiveInterval(for: preset))
+        var nextSeconds = effectiveInterval(for: preset)
+        if randomRunNeedsInitialDelay {
+            nextSeconds += randomRunStartDelaySeconds
+            randomRunNeedsInitialDelay = false
+        }
+        scheduleRandomRunTick(after: nextSeconds)
     }
 
     private func scheduleRandomRunTick(after seconds: Int) {

@@ -90,8 +90,8 @@ final class BLEManager: NSObject, ObservableObject {
     }
 
     func send(_ data: Data) {
-        guard let peripheral = connected, let characteristic = writeChar else { return }
         lastTxHex = TennisCommand.hex(data)
+        guard let peripheral = connected, let characteristic = writeChar else { return }
         peripheral.writeValue(data, for: characteristic, type: .withResponse)
     }
 

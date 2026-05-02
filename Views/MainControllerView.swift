@@ -1,26 +1,24 @@
 import SwiftUI
 
-struct Page3RandomRunView: View {
+struct MainControllerView: View {
     @ObservedObject var vm: ControlViewModel
 
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                iconButton(systemName: "play.fill", color: .green) { vm.startRandomRun() }
+                iconButton(systemName: "play.fill", color: .green) { vm.start() }
                 iconButton(systemName: "stop.fill", color: .red) { vm.stop() }
             }
             .frame(maxHeight: .infinity)
 
             HStack(spacing: 8) {
-                Button("TIME-") { vm.decRandomRunInterval() }
+                Button("FREQ-") { vm.decFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
-
-                Text("\(vm.randomRunInterval)")
+                Text("\(vm.frequency)")
                     .font(.headline)
-                    .frame(minWidth: 36)
-
-                Button("TIME+") { vm.incRandomRunInterval() }
+                    .frame(minWidth: 28)
+                Button("FREQ+") { vm.incFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
             }
@@ -28,23 +26,6 @@ struct Page3RandomRunView: View {
         }
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .alert(
-            "Cannot Start",
-            isPresented: Binding(
-                get: { vm.randomRunAlertMessage != nil },
-                set: { newValue in
-                    if !newValue {
-                        vm.randomRunAlertMessage = nil
-                    }
-                }
-            )
-        ) {
-            Button("OK", role: .cancel) {
-                vm.randomRunAlertMessage = nil
-            }
-        } message: {
-            Text(vm.randomRunAlertMessage ?? "")
-        }
     }
 
     private func iconButton(systemName: String, color: Color, action: @escaping () -> Void) -> some View {

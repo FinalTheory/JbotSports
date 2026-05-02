@@ -1,6 +1,6 @@
 import SwiftUI
 
-struct Page2View: View {
+struct DetailControllerView: View {
     @ObservedObject var vm: ControlViewModel
 
     var body: some View {
@@ -31,14 +31,17 @@ struct Page2View: View {
                     .buttonStyle(.bordered)
             }
 
-            Slider(
-                value: Binding(
-                    get: { Double(vm.spinValue) },
-                    set: { vm.applySpin(diff: Int($0.rounded())) }
-                ),
-                in: -50...50,
-                step: 5
-            )
+            HStack(spacing: 8) {
+                Button("SPIN-") { vm.applySpin(diff: vm.spinValue - 5) }
+                    .buttonStyle(.bordered)
+
+                Text("\(vm.spinValue)")
+                    .font(.headline)
+                    .frame(minWidth: 44)
+
+                Button("SPIN+") { vm.applySpin(diff: vm.spinValue + 5) }
+                    .buttonStyle(.bordered)
+            }
         }
         .padding(.horizontal, 6)
     }

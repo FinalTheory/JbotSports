@@ -14,6 +14,7 @@ enum BLEConstants {
         static let stop: [UInt8] = [0x06, 0x01]
         static let frequency: [UInt8] = [0x03, 0x01]
         static let shortAngle: [UInt8] = [0x04, 0x01]
+        static let fineTuning: [UInt8] = [0x0B, 0x01]
     }
 }
 
@@ -25,6 +26,7 @@ enum TennisCommand {
     static let stop = BLEConstants.Packet.stop
     static let frequency = BLEConstants.Packet.frequency
     static let shortAngle = BLEConstants.Packet.shortAngle
+    static let fineTuning = BLEConstants.Packet.fineTuning
 
     static func packet(cmd: [UInt8], data: [UInt8]) -> Data {
         var bytes: [UInt8] = []
@@ -78,6 +80,10 @@ enum TennisCommand {
 
     static func setShortAngle(_ angle: UInt8) -> Data {
         packet(cmd: shortAngle, data: [angle])
+    }
+
+    static func fineTune(_ direction: UInt8) -> Data {
+        packet(cmd: fineTuning, data: [direction])
     }
 
     static func hex(_ data: Data) -> String {

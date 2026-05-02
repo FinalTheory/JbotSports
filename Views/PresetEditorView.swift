@@ -344,7 +344,7 @@ private struct OrderKeypadView: View {
     }
 }
 
-private struct NumericAdjustView: View {
+struct NumericAdjustView: View {
     @Environment(\.dismiss) private var dismiss
     let title: String
     let range: ClosedRange<Int>

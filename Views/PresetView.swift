@@ -1,9 +1,10 @@
 import SwiftUI
 
-struct Page3View: View {
+struct PresetView: View {
     @ObservedObject var vm: ControlViewModel
     @State private var editingPreset: Preset?
     @State private var creatingPreset = false
+    @State private var showSettings = false
 
     var body: some View {
         List {
@@ -45,8 +46,9 @@ struct Page3View: View {
                 .listRowBackground(Color.clear)
             }
 
-            HStack {
-                Spacer()
+            HStack(spacing: 8) {
+                Spacer(minLength: 0)
+
                 Button {
                     creatingPreset = true
                 } label: {
@@ -59,10 +61,29 @@ struct Page3View: View {
                         )
                 }
                 .buttonStyle(.plain)
-                Spacer()
+
+                Button {
+                    showSettings = true
+                } label: {
+                    Image(systemName: "gearshape")
+                        .font(.subheadline.weight(.semibold))
+                        .frame(width: 34, height: 26)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                                .stroke(Color.white.opacity(0.35), lineWidth: 1)
+                        )
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 0)
             }
             .listRowInsets(.init(top: 2, leading: 0, bottom: 2, trailing: 0))
             .listRowBackground(Color.clear)
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView(vm: vm)
+            }
         }
         .sheet(item: $editingPreset) { preset in
             NavigationStack {
