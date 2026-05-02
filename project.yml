@@ -1,33 +1,41 @@
-name: tennis_ctl
+name: JbotsportsWatch
 options:
-  bundleIdPrefix: me.finaltheory
+  bundleIdPrefix: org.jbotsports
   deploymentTarget:
     watchOS: '10.0'
 settings:
   base:
     SWIFT_VERSION: 5.0
-    PRODUCT_NAME: tennis_ctl
+    PRODUCT_NAME: JbotsportsWatch
 
 configs:
   Debug: debug
   Release: release
 
 targets:
-  tennis_ctl Watch App:
+  JbotsportsWatch Watch App:
     type: application
     platform: watchOS
     sources:
-      - path: .
-        excludes:
-          - README.md
-          - project.yml
+      - path: TennisCtlWatchApp.swift
+      - path: BLE
+      - path: Models
+      - path: ViewModels
+      - path: Views
+      - path: Info.plist
+      - path: Assets.xcassets
+        buildPhase: resources
+      - path: en.lproj/Localizable.strings
+        buildPhase: resources
+      - path: zh-Hans.lproj/Localizable.strings
+        buildPhase: resources
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: me.finaltheory.tennisctl.watchapp
-        PRODUCT_NAME: tennis_ctl
+        PRODUCT_BUNDLE_IDENTIFIER: org.jbotsports.v6.watchapp
+        PRODUCT_NAME: JbotsportsWatch
         GENERATE_INFOPLIST_FILE: YES
-        INFOPLIST_KEY_CFBundleDisplayName: tennis_ctl
-        INFOPLIST_KEY_CFBundleName: tennis_ctl
+        INFOPLIST_KEY_CFBundleDisplayName: JbotsportsWatch
+        INFOPLIST_KEY_CFBundleName: JbotsportsWatch
         INFOPLIST_KEY_WKApplication: YES
         INFOPLIST_KEY_WKWatchOnly: YES
         INFOPLIST_KEY_NSBluetoothAlwaysUsageDescription: Need Bluetooth to connect tennis machine.
