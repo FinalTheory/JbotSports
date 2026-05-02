@@ -44,14 +44,14 @@ struct PresetEditorView: View {
 
     var body: some View {
         Form {
-            TextField("Name", text: $name)
+            TextField(NSLocalizedString("field_name", comment: "Name"), text: $name)
             NavigationLink {
                 OrderKeypadView(value: orderText) {
                     orderText = $0
                 }
             } label: {
                 HStack {
-                    Text("Order")
+                    Text(NSLocalizedString("field_order", comment: "Order"))
                     Spacer()
                     Text(orderPreview)
                         .font(.caption2)
@@ -61,46 +61,46 @@ struct PresetEditorView: View {
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Top Speed", value: topSpeedValue, range: 30...100, step: 5) {
+                NumericAdjustView(title: NSLocalizedString("field_top_speed", comment: "Top speed"), value: topSpeedValue, range: 30...100, step: 5) {
                     topSpeedValue = $0
                 }
             } label: {
-                numericRow(title: "Top Speed", value: topSpeedValue)
+                numericRow(title: NSLocalizedString("field_top_speed", comment: "Top speed"), value: topSpeedValue)
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Bottom Speed", value: bottomSpeedValue, range: 30...100, step: 5) {
+                NumericAdjustView(title: NSLocalizedString("field_bottom_speed", comment: "Bottom speed"), value: bottomSpeedValue, range: 30...100, step: 5) {
                     bottomSpeedValue = $0
                 }
             } label: {
-                numericRow(title: "Bottom Speed", value: bottomSpeedValue)
+                numericRow(title: NSLocalizedString("field_bottom_speed", comment: "Bottom speed"), value: bottomSpeedValue)
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Frequency", value: frequencyValue, range: 1...9) {
+                NumericAdjustView(title: NSLocalizedString("field_frequency", comment: "Frequency"), value: frequencyValue, range: 1...9) {
                     frequencyValue = $0
                 }
             } label: {
-                numericRow(title: "Frequency", value: frequencyValue)
+                numericRow(title: NSLocalizedString("field_frequency", comment: "Frequency"), value: frequencyValue)
             }
 
             NavigationLink {
-                NumericAdjustView(title: "Height", value: shortAngleValue, range: 12...60) {
+                NumericAdjustView(title: NSLocalizedString("field_height", comment: "Height"), value: shortAngleValue, range: 12...60) {
                     shortAngleValue = $0
                 }
             } label: {
-                numericRow(title: "Height", value: shortAngleValue)
+                numericRow(title: NSLocalizedString("field_height", comment: "Height"), value: shortAngleValue)
             }
 
-            Toggle("Random", isOn: $isRandom)
-            Toggle("Shuffle", isOn: $shuffle)
+            Toggle(NSLocalizedString("field_random", comment: "Random"), isOn: $isRandom)
+            Toggle(NSLocalizedString("field_shuffle", comment: "Shuffle"), isOn: $shuffle)
 
             NavigationLink {
-                NumericAdjustView(title: "Interval", value: intervalValue, range: 0...120, step: 5) {
+                NumericAdjustView(title: NSLocalizedString("field_interval", comment: "Interval"), value: intervalValue, range: 0...120, step: 5) {
                     intervalValue = $0
                 }
             } label: {
-                numericRow(title: "Interval", value: intervalValue)
+                numericRow(title: NSLocalizedString("field_interval", comment: "Interval"), value: intervalValue)
             }
 
             if !error.isEmpty {
@@ -139,7 +139,7 @@ struct PresetEditorView: View {
                     self.error = error.localizedDescription
                 }
             } label: {
-                Text("Save")
+                Text(NSLocalizedString("action_save", comment: "Save"))
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
                     .contentShape(Rectangle())
@@ -155,7 +155,7 @@ struct PresetEditorView: View {
                     showDeleteConfirm = true
                 }
                 label: {
-                    Text("Delete")
+                    Text(NSLocalizedString("action_delete", comment: "Delete"))
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
                         .contentShape(Rectangle())
@@ -168,20 +168,20 @@ struct PresetEditorView: View {
                 .disabled(!canDelete)
             }
         }
-        .navigationTitle("Edit Preset")
-        .alert("Delete Preset?", isPresented: $showDeleteConfirm) {
-            Button("Cancel", role: .cancel) {}
-            Button("Delete", role: .destructive) {
+        .navigationTitle(NSLocalizedString("title_edit_preset", comment: "Edit preset"))
+        .alert(NSLocalizedString("confirm_delete_preset", comment: "Delete preset confirm"), isPresented: $showDeleteConfirm) {
+            Button(NSLocalizedString("action_cancel", comment: "Cancel"), role: .cancel) {}
+            Button(NSLocalizedString("action_delete", comment: "Delete"), role: .destructive) {
                 onDelete?()
                 dismiss()
             }
         } message: {
-            Text("This action cannot be undone.")
+            Text(NSLocalizedString("message_delete_irreversible", comment: "Delete irreversible message"))
         }
     }
 
     private var orderPreview: String {
-        orderText.isEmpty ? "Tap to edit" : orderText
+        orderText.isEmpty ? NSLocalizedString("hint_tap_to_edit", comment: "Tap to edit") : orderText
     }
 
     private func numericRow(title: String, value: Int) -> some View {
@@ -218,10 +218,11 @@ struct PresetEditorView: View {
 
     private func validate(_ v: Int, in range: ClosedRange<Int>, name: String) throws -> Int {
         guard range.contains(v) else {
+            let message = "\(name) out of range: \(v), must be \(range.lowerBound)...\(range.upperBound)"
             throw NSError(
                 domain: "Preset",
                 code: 5,
-                userInfo: [NSLocalizedDescriptionKey: "\(name) out of range: \(v), must be \(range.lowerBound)...\(range.upperBound)"]
+                userInfo: [NSLocalizedDescriptionKey: message]
             )
         }
         return v
@@ -249,7 +250,7 @@ private struct OrderKeypadView: View {
         VStack(spacing: 8) {
             ScrollViewReader { proxy in
                 ScrollView {
-                    Text(orderText.isEmpty ? "No points" : orderText)
+                    Text(orderText.isEmpty ? NSLocalizedString("hint_no_points", comment: "No points") : orderText)
                         .font(.headline)
                         .multilineTextAlignment(.leading)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
@@ -293,7 +294,7 @@ private struct OrderKeypadView: View {
             .frame(maxWidth: .infinity, minHeight: 34)
 
             HStack(spacing: 8) {
-                Button("Add") {
+                Button(NSLocalizedString("action_add", comment: "Add")) {
                     guard values.count < 28 else { return }
                     values.append(candidate)
                     haptic()
@@ -301,7 +302,7 @@ private struct OrderKeypadView: View {
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
 
-                Button("Del") {
+                Button(NSLocalizedString("action_del", comment: "Delete last")) {
                     if !values.isEmpty {
                         _ = values.removeLast()
                         haptic()
@@ -310,7 +311,7 @@ private struct OrderKeypadView: View {
                 .buttonStyle(.bordered)
                 .frame(maxWidth: .infinity)
 
-                Button("Save") {
+                Button(NSLocalizedString("action_save", comment: "Save")) {
                     haptic()
                     onSave(orderText)
                     dismiss()
@@ -323,7 +324,7 @@ private struct OrderKeypadView: View {
         .onAppear {
             crownFocused = true
         }
-        .navigationTitle("Order")
+        .navigationTitle(NSLocalizedString("title_order", comment: "Order title"))
     }
 
     private var orderText: String {
@@ -331,9 +332,22 @@ private struct OrderKeypadView: View {
     }
 
     private func positionName(_ value: Int) -> String {
-        guard (1...28).contains(value) else { return "Unknown" }
-        let rows = ["前场", "中场", "后场", "底线"]
-        let lanes = ["左3", "左2", "左1", "中路", "右1", "右2", "右3"]
+        guard (1...28).contains(value) else { return NSLocalizedString("position_unknown", comment: "Unknown position") }
+        let rows = [
+            NSLocalizedString("position_row_front", comment: "Front row"),
+            NSLocalizedString("position_row_mid", comment: "Middle row"),
+            NSLocalizedString("position_row_rear", comment: "Rear row"),
+            NSLocalizedString("position_row_baseline", comment: "Baseline row")
+        ]
+        let lanes = [
+            NSLocalizedString("position_lane_l3", comment: "Left 3"),
+            NSLocalizedString("position_lane_l2", comment: "Left 2"),
+            NSLocalizedString("position_lane_l1", comment: "Left 1"),
+            NSLocalizedString("position_lane_center", comment: "Center"),
+            NSLocalizedString("position_lane_r1", comment: "Right 1"),
+            NSLocalizedString("position_lane_r2", comment: "Right 2"),
+            NSLocalizedString("position_lane_r3", comment: "Right 3")
+        ]
         let rowIndex = (value - 1) / 7
         let colIndex = (value - 1) % 7
         return rows[rowIndex] + lanes[colIndex]
@@ -399,7 +413,7 @@ struct NumericAdjustView: View {
                 .frame(maxWidth: .infinity)
             }
 
-            Button("Save") {
+            Button(NSLocalizedString("action_save", comment: "Save")) {
                 onSave(value)
                 dismiss()
             }

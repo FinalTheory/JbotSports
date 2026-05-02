@@ -70,7 +70,7 @@ struct TennisCtlWatchApp: App {
                             NavigationLink {
                                 PairingView(ble: ble)
                             } label: {
-                                Text("Pair")
+                                Text(NSLocalizedString("label_pair", comment: "Pair"))
                                     .font(.system(size: 16, weight: .semibold))
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)

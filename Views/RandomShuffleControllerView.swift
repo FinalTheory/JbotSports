@@ -12,7 +12,7 @@ struct RandomShuffleControllerView: View {
             .frame(maxHeight: .infinity)
 
             HStack(spacing: 8) {
-                Button("TIME-") { vm.decRandomRunInterval() }
+                Button(NSLocalizedString("label_time_minus", comment: "Time minus")) { vm.decRandomRunInterval() }
                     .buttonStyle(.bordered)
                     .frame(maxHeight: 30)
 
@@ -20,7 +20,7 @@ struct RandomShuffleControllerView: View {
                     .font(.headline)
                     .frame(minWidth: 36)
 
-                Button("TIME+") { vm.incRandomRunInterval() }
+                Button(NSLocalizedString("label_time_plus", comment: "Time plus")) { vm.incRandomRunInterval() }
                     .buttonStyle(.bordered)
                     .frame(maxHeight: 30)
             }
@@ -49,7 +49,7 @@ struct RandomShuffleControllerView: View {
         .padding(8)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .alert(
-            "Cannot Start",
+            NSLocalizedString("title_cannot_start", comment: "Cannot start"),
             isPresented: Binding(
                 get: { vm.randomRunAlertMessage != nil },
                 set: { newValue in
@@ -59,7 +59,7 @@ struct RandomShuffleControllerView: View {
                 }
             )
         ) {
-            Button("OK", role: .cancel) {
+            Button(NSLocalizedString("action_ok", comment: "OK"), role: .cancel) {
                 vm.randomRunAlertMessage = nil
             }
         } message: {

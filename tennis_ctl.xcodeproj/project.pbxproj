@@ -25,6 +25,8 @@
 		9D164A7A2FA3EB8800601E69 /* RandomShuffleControllerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D164A792FA3EB8800601E69 /* RandomShuffleControllerView.swift */; };
 		9D770DAD2FA3526500401C9E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 9D770DAC2FA3526500401C9E /* Assets.xcassets */; };
 		9D7A7CBC2FA56FEA008E50E9 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9D7A7CBB2FA56FEA008E50E9 /* SettingsView.swift */; };
+		9DF1B4452FA587D100E6583B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9DF1B4402FA587D100E6583B /* Localizable.strings */; };
+		9DF1B4462FA587D100E6583B /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = 9DF1B4432FA587D100E6583B /* Localizable.strings */; };
 		A95404412136332728C42433 /* DetailControllerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7316A4547BD2AD5CAB501A60 /* DetailControllerView.swift */; };
 		AF88B71040B522C3290595F0 /* fsmonitor-watchman.sample in Resources */ = {isa = PBXBuildFile; fileRef = 65BBC3101D0BDE6CAABD198B /* fsmonitor-watchman.sample */; };
 		B41A1CA1A0F4EA2F770151F0 /* commit-msg.sample in Resources */ = {isa = PBXBuildFile; fileRef = E587C8FBA0EDB988A888237A /* commit-msg.sample */; };
@@ -78,6 +80,8 @@
 		9D164A792FA3EB8800601E69 /* RandomShuffleControllerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RandomShuffleControllerView.swift; sourceTree = "<group>"; };
 		9D770DAC2FA3526500401C9E /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		9D7A7CBB2FA56FEA008E50E9 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		9DF1B43F2FA587D100E6583B /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Localizable.strings; sourceTree = "<group>"; };
+		9DF1B4422FA587D100E6583B /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = Localizable.strings; sourceTree = "<group>"; };
 		A5B914631A84D86A73434DA7 /* update.sample */ = {isa = PBXFileReference; lastKnownFileType = text.script.sh; path = update.sample; sourceTree = "<group>"; };
 		AC54AAAACC3676067791157C /* 7f6fc29f536d3f411ebb4c56a0a4aa85f3b32e */ = {isa = PBXFileReference; lastKnownFileType = file; path = 7f6fc29f536d3f411ebb4c56a0a4aa85f3b32e; sourceTree = "<group>"; };
 		AE7332914F2211238E52E9D8 /* tennis_ctl.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = tennis_ctl.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -279,6 +283,22 @@
 			path = BLE;
 			sourceTree = "<group>";
 		};
+		9DF1B4412FA587D100E6583B /* en.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				9DF1B4402FA587D100E6583B /* Localizable.strings */,
+			);
+			path = en.lproj;
+			sourceTree = "<group>";
+		};
+		9DF1B4442FA587D100E6583B /* zh-Hans.lproj */ = {
+			isa = PBXGroup;
+			children = (
+				9DF1B4432FA587D100E6583B /* Localizable.strings */,
+			);
+			path = "zh-Hans.lproj";
+			sourceTree = "<group>";
+		};
 		A36CD2709919B023842A1E87 /* 4c */ = {
 			isa = PBXGroup;
 			children = (
@@ -357,6 +377,8 @@
 			children = (
 				48DC618031CC6AA15800FACC /* Info.plist */,
 				8E7C61845CA9C29CB7CB7129 /* TennisCtlWatchApp.swift */,
+				9DF1B4412FA587D100E6583B /* en.lproj */,
+				9DF1B4442FA587D100E6583B /* zh-Hans.lproj */,
 			);
 			name = tennis_ctl;
 			path = .;
@@ -414,6 +436,7 @@
 			knownRegions = (
 				Base,
 				en,
+				"zh-Hans",
 			);
 			mainGroup = D38DB757DF373721FB2226F7;
 			minimizedProjectReferenceProxies = 1;
@@ -442,6 +465,8 @@
 				DF106EEC61C08C46E2374F06 /* post-update.sample in Resources */,
 				24E9FED31BAA79895E76D2B4 /* pre-applypatch.sample in Resources */,
 				B5C925E7E1DF7BF055C9577B /* pre-commit.sample in Resources */,
+				9DF1B4452FA587D100E6583B /* Localizable.strings in Resources */,
+				9DF1B4462FA587D100E6583B /* Localizable.strings in Resources */,
 				0715BEE3417CB800300E1312 /* pre-merge-commit.sample in Resources */,
 				2AFA611B8900634063043CED /* pre-push.sample in Resources */,
 				34018133DB26645722E5402A /* pre-rebase.sample in Resources */,
@@ -478,6 +503,25 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXVariantGroup section */
+		9DF1B4402FA587D100E6583B /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9DF1B43F2FA587D100E6583B /* en */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+		9DF1B4432FA587D100E6583B /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				9DF1B4422FA587D100E6583B /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
 
 /* Begin XCBuildConfiguration section */
 		056DD40044E9825E2596E5D9 /* Debug */ = {

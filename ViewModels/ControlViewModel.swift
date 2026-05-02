@@ -3,10 +3,19 @@ import Combine
 
 @MainActor
 final class ControlViewModel: ObservableObject {
+    enum AppLanguage: String, CaseIterable, Identifiable {
+        case system
+        case english = "en"
+        case chineseSimplified = "zh-Hans"
+
+        var id: String { rawValue }
+    }
+
     @Published var randomRunInterval: Int = 20
     @Published var randomRunInitialIntervalSeconds: Int = 20
     @Published var randomRunStartDelaySeconds: Int = 8
     @Published var debugEnabled: Bool = false
+    @Published var appLanguage: AppLanguage = .system
     @Published var isRandomRunActive: Bool = false
     @Published var randomRunAlertMessage: String?
     @Published var flashHint: String = ""
@@ -30,6 +39,7 @@ final class ControlViewModel: ObservableObject {
     private static let randomRunInitialIntervalStorageKey = "tennis_ctl.random_run_initial_interval"
     private static let randomRunStartDelayStorageKey = "tennis_ctl.random_run_start_delay"
     private static let debugEnabledStorageKey = "tennis_ctl.debug_enabled"
+    private static let appLanguageStorageKey = "tennis_ctl.app_language"
 
     init(ble: BLEManager) {
         self.ble = ble
@@ -41,6 +51,11 @@ final class ControlViewModel: ObservableObject {
         let storedDelay = UserDefaults.standard.integer(forKey: Self.randomRunStartDelayStorageKey)
         self.randomRunStartDelaySeconds = storedDelay == 0 ? 8 : storedDelay
         self.debugEnabled = UserDefaults.standard.bool(forKey: Self.debugEnabledStorageKey)
+        if let raw = UserDefaults.standard.string(forKey: Self.appLanguageStorageKey),
+           let language = AppLanguage(rawValue: raw) {
+            self.appLanguage = language
+        }
+        applyLanguagePreference(self.appLanguage)
         if let firstPreset = self.presets.first {
             self.activePresetID = firstPreset.id
             self.topSpeed = firstPreset.topSpeed
@@ -195,6 +210,24 @@ final class ControlViewModel: ObservableObject {
         guard enabled != debugEnabled else { return }
         debugEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: Self.debugEnabledStorageKey)
+    }
+
+    func setAppLanguage(_ language: AppLanguage) {
+        guard language != appLanguage else { return }
+        appLanguage = language
+        UserDefaults.standard.set(language.rawValue, forKey: Self.appLanguageStorageKey)
+        applyLanguagePreference(language)
+    }
+
+    private func applyLanguagePreference(_ language: AppLanguage) {
+        switch language {
+        case .system:
+            UserDefaults.standard.removeObject(forKey: "AppleLanguages")
+        case .english:
+            UserDefaults.standard.set(["en"], forKey: "AppleLanguages")
+        case .chineseSimplified:
+            UserDefaults.standard.set(["zh-Hans"], forKey: "AppleLanguages")
+        }
     }
 
     func sendStartPreview() {

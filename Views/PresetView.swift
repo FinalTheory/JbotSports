@@ -118,7 +118,7 @@ struct PresetView: View {
 
     private func newPresetTemplate() -> Preset {
         Preset(
-            name: "New Preset",
+            name: NSLocalizedString("default_new_preset", comment: "Default preset name"),
             order: [25],
             isRandom: true,
             shuffle: false,

@@ -12,13 +12,13 @@ struct MainControllerView: View {
             .frame(maxHeight: .infinity)
 
             HStack(spacing: 8) {
-                Button("FREQ-") { vm.decFrequency() }
+                Button(NSLocalizedString("label_freq_minus", comment: "Frequency minus")) { vm.decFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
                 Text("\(vm.frequency)")
                     .font(.headline)
                     .frame(minWidth: 28)
-                Button("FREQ+") { vm.incFrequency() }
+                Button(NSLocalizedString("label_freq_plus", comment: "Frequency plus")) { vm.incFrequency() }
                     .buttonStyle(.bordered)
                     .frame(minHeight: 60)
             }

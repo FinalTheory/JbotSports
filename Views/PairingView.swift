@@ -6,13 +6,13 @@ struct PairingView: View {
 
     var body: some View {
         List {
-            Section("Devices") {
+            Section(NSLocalizedString("section_devices", comment: "Devices section")) {
                 ForEach(ble.discovered, id: \.identifier) { p in
                     Button {
                         ble.connect(p)
                     } label: {
                         HStack {
-                            Text(p.name ?? "Unknown")
+                            Text(p.name ?? NSLocalizedString("label_unknown", comment: "Unknown device"))
                             Spacer()
                             if ble.connected?.identifier == p.identifier && ble.isReady {
                                 Image(systemName: "checkmark.circle.fill")
@@ -27,9 +27,9 @@ struct PairingView: View {
             }
 
             Section {
-                Button(ble.isScanning ? "Scanning..." : "Rescan") { ble.startScan() }
+                Button(ble.isScanning ? NSLocalizedString("label_scanning", comment: "Scanning") : NSLocalizedString("action_rescan", comment: "Rescan")) { ble.startScan() }
             }
         }
-        .navigationTitle("Pair")
+        .navigationTitle(NSLocalizedString("label_pair", comment: "Pair"))
     }
 }

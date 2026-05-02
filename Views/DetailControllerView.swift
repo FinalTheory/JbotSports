@@ -6,43 +6,44 @@ struct DetailControllerView: View {
     var body: some View {
         VStack(spacing: 8) {
             HStack(spacing: 8) {
-                Button("S-") { vm.decOverallSpeed() }
+                Button(NSLocalizedString("label_speed_minus", comment: "Speed minus")) { vm.decOverallSpeed() }
                     .buttonStyle(.bordered)
                 VStack(spacing: 2) {
-                    Text("U:\(vm.topSpeed)")
-                    Text("D:\(vm.bottomSpeed)")
+                    Text("\(NSLocalizedString("label_upper_wheel_short", comment: "Upper wheel short")):\(vm.topSpeed)")
+                    Text("\(NSLocalizedString("label_lower_wheel_short", comment: "Lower wheel short")):\(vm.bottomSpeed)")
                 }
                 .font(.headline)
                 .frame(minWidth: 44)
-                Button("S+") { vm.incOverallSpeed() }
+                Button(NSLocalizedString("label_speed_plus", comment: "Speed plus")) { vm.incOverallSpeed() }
                     .buttonStyle(.bordered)
             }
 
             HStack(spacing: 8) {
-                Button("H-") { vm.decHeight() }
+                Button(NSLocalizedString("label_height_minus", comment: "Height minus")) { vm.decHeight() }
                     .buttonStyle(.bordered)
                 VStack(spacing: 2) {
-                    Text("H:\(vm.shortAngle)")
-                    Text("S:\(vm.spinValue)")
+                    Text("\(NSLocalizedString("label_height_short", comment: "Height short")):\(vm.shortAngle)")
+                    Text("\(NSLocalizedString("label_spin_short", comment: "Spin short")):\(vm.spinValue)")
                 }
                 .font(.headline)
                 .frame(minWidth: 52)
-                Button("H+") { vm.incHeight() }
+                Button(NSLocalizedString("label_height_plus", comment: "Height plus")) { vm.incHeight() }
                     .buttonStyle(.bordered)
             }
 
             HStack(spacing: 8) {
-                Button("SPIN-") { vm.applySpin(diff: vm.spinValue - 5) }
+                Button(NSLocalizedString("label_spin_minus", comment: "Spin minus")) { vm.applySpin(diff: vm.spinValue - 5) }
                     .buttonStyle(.bordered)
 
                 Text("\(vm.spinValue)")
                     .font(.headline)
                     .frame(minWidth: 44)
 
-                Button("SPIN+") { vm.applySpin(diff: vm.spinValue + 5) }
+                Button(NSLocalizedString("label_spin_plus", comment: "Spin plus")) { vm.applySpin(diff: vm.spinValue + 5) }
                     .buttonStyle(.bordered)
             }
         }
         .padding(.horizontal, 6)
     }
+
 }
