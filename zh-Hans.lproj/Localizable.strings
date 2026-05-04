@@ -62,3 +62,4 @@
 "title_order" = "球路";
 "title_language_applied" = "语言已更新";
 "message_restart_required" = "重启应用后将完全应用新语言。";
+"label_heartbeat_interval" = "心跳间隔";

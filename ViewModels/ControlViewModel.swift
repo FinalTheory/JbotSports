@@ -14,6 +14,7 @@ final class ControlViewModel: ObservableObject {
     @Published var randomRunInterval: Int = 20
     @Published var randomRunInitialIntervalSeconds: Int = 20
     @Published var randomRunStartDelaySeconds: Int = 8
+    @Published var heartbeatIntervalSeconds: Int = 0
     @Published var debugEnabled: Bool = false
     @Published var appLanguage: AppLanguage = .system
     @Published var isRandomRunActive: Bool = false
@@ -31,6 +32,7 @@ final class ControlViewModel: ObservableObject {
     private let ble: BLEManager
     private var spinAnchor: Int = 60
     private var randomRunTimer: Timer?
+    private var heartbeatTimer: Timer?
     private var randomCycleQueue: [UUID] = []
     private var randomCycleIndex: Int = 0
     private var randomRunNeedsInitialDelay: Bool = false
@@ -38,6 +40,8 @@ final class ControlViewModel: ObservableObject {
     private static let presetsStorageKey = "tennis_ctl.presets"
     private static let randomRunInitialIntervalStorageKey = "tennis_ctl.random_run_initial_interval"
     private static let randomRunStartDelayStorageKey = "tennis_ctl.random_run_start_delay"
+    private static let heartbeatIntervalStorageKey = "tennis_ctl.heartbeat_interval"
+    private static let legacyAngleHeartbeatIntervalStorageKey = "tennis_ctl.angle_heartbeat_interval"
     private static let debugEnabledStorageKey = "tennis_ctl.debug_enabled"
     private static let appLanguageStorageKey = "tennis_ctl.app_language"
 
@@ -50,6 +54,12 @@ final class ControlViewModel: ObservableObject {
         self.randomRunInterval = initialInterval
         let storedDelay = UserDefaults.standard.integer(forKey: Self.randomRunStartDelayStorageKey)
         self.randomRunStartDelaySeconds = storedDelay == 0 ? 8 : storedDelay
+        let storedHeartbeat = UserDefaults.standard.object(forKey: Self.heartbeatIntervalStorageKey) as? Int
+        if let storedHeartbeat {
+            self.heartbeatIntervalSeconds = storedHeartbeat
+        } else {
+            self.heartbeatIntervalSeconds = UserDefaults.standard.integer(forKey: Self.legacyAngleHeartbeatIntervalStorageKey)
+        }
         self.debugEnabled = UserDefaults.standard.bool(forKey: Self.debugEnabledStorageKey)
         if let raw = UserDefaults.standard.string(forKey: Self.appLanguageStorageKey),
            let language = AppLanguage(rawValue: raw) {
@@ -163,10 +173,12 @@ final class ControlViewModel: ObservableObject {
         stopRandomRunLoop()
         guard let preset = activePreset else { return }
         sendStart(order: preset.order, random: preset.isRandom, startFlag: 1)
+        startHeartbeatIfNeeded()
     }
 
     func stop() {
         stopRandomRunLoop()
+        stopHeartbeat()
         ble.send(TennisCommand.stopV6())
     }
 
@@ -190,6 +202,7 @@ final class ControlViewModel: ObservableObject {
         isRandomRunActive = true
         randomRunNeedsInitialDelay = true
         rebuildRandomCycleQueue(from: candidates)
+        startHeartbeatIfNeeded()
         runCurrentRandomCyclePresetAndScheduleNext()
     }
 
@@ -210,6 +223,18 @@ final class ControlViewModel: ObservableObject {
         guard enabled != debugEnabled else { return }
         debugEnabled = enabled
         UserDefaults.standard.set(enabled, forKey: Self.debugEnabledStorageKey)
+    }
+
+    func setHeartbeatInterval(seconds: Int) {
+        let normalized = max(0, min(30, seconds))
+        guard normalized != heartbeatIntervalSeconds else { return }
+        heartbeatIntervalSeconds = normalized
+        UserDefaults.standard.set(normalized, forKey: Self.heartbeatIntervalStorageKey)
+
+        // Reconfigure active heartbeat without creating duplicate timers.
+        if heartbeatTimer != nil {
+            startHeartbeatIfNeeded()
+        }
     }
 
     func setAppLanguage(_ language: AppLanguage) {
@@ -245,6 +270,24 @@ final class ControlViewModel: ObservableObject {
         randomRunTimer = nil
         isRandomRunActive = false
         randomRunNeedsInitialDelay = false
+    }
+
+    private func startHeartbeatIfNeeded() {
+        stopHeartbeat()
+        guard heartbeatIntervalSeconds > 0 else { return }
+
+        heartbeatTimer = Timer.scheduledTimer(
+            withTimeInterval: TimeInterval(heartbeatIntervalSeconds),
+            repeats: true
+        ) { [weak self] _ in
+            guard let self else { return }
+            self.ble.send(TennisCommand.setFrequency(UInt8(self.frequency)))
+        }
+    }
+
+    private func stopHeartbeat() {
+        heartbeatTimer?.invalidate()
+        heartbeatTimer = nil
     }
 
     private func runCurrentRandomCyclePresetAndScheduleNext() {

@@ -57,6 +57,24 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            NavigationLink {
+                NumericAdjustView(
+                    title: NSLocalizedString("label_heartbeat_interval", comment: "Heartbeat interval"),
+                    value: vm.heartbeatIntervalSeconds,
+                    range: 0...30,
+                    step: 1
+                ) {
+                    vm.setHeartbeatInterval(seconds: $0)
+                }
+            } label: {
+                HStack {
+                    Text(NSLocalizedString("label_heartbeat_interval", comment: "Heartbeat interval"))
+                    Spacer()
+                    Text("\(vm.heartbeatIntervalSeconds) s")
+                        .foregroundStyle(.secondary)
+                }
+            }
         }
         .navigationTitle(NSLocalizedString("title_settings", comment: "Settings"))
     }

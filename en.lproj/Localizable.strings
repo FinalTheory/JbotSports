@@ -62,3 +62,4 @@
 "title_order" = "Order";
 "title_language_applied" = "Language Updated";
 "message_restart_required" = "Language will fully apply after restarting the app.";
+"label_heartbeat_interval" = "Heartbeat Interval";

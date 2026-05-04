@@ -19,10 +19,14 @@ final class BLEManager: NSObject, ObservableObject {
     private var pendingCharacteristicServices: Set<CBUUID> = []
     private var preSuspendPeripheralID: UUID?
     private var resumeTimeoutWorkItem: DispatchWorkItem?
+    private var reconnectTargetID: UUID?
+    private var reconnectWorkItem: DispatchWorkItem?
+    private var manualDisconnectRequested = false
 
     private let serviceUUID = CBUUID(string: BLEConstants.UUIDs.service)
     private let writeUUID = CBUUID(string: BLEConstants.UUIDs.write)
     private let notifyUUID = CBUUID(string: BLEConstants.UUIDs.notify)
+    private let reconnectInterval: TimeInterval = 2.0
 
     override init() {
         super.init()
@@ -41,9 +45,10 @@ final class BLEManager: NSObject, ObservableObject {
         }
         publishDiscovered()
 
+        // Keep scanning aggressive for better reconnect behavior at weak signal edges.
         central.scanForPeripherals(
-            withServices: nil,
-            options: [CBCentralManagerScanOptionAllowDuplicatesKey: false]
+            withServices: [serviceUUID],
+            options: [CBCentralManagerScanOptionAllowDuplicatesKey: true]
         )
     }
 
@@ -53,6 +58,9 @@ final class BLEManager: NSObject, ObservableObject {
     }
 
     func connect(_ peripheral: CBPeripheral) {
+        cancelReconnectLoop()
+        manualDisconnectRequested = false
+
         if connected?.identifier == peripheral.identifier && isReady {
             discoveredByID[peripheral.identifier] = peripheral
             publishDiscovered()
@@ -126,14 +134,14 @@ final class BLEManager: NSObject, ObservableObject {
         if let peripheral = targetPeripheral {
             connect(peripheral)
         } else {
-            startScan()
+            startReconnectLoop(for: targetID)
         }
 
         let timeoutItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             let recovered = (self.connected?.identifier == targetID && self.isReady)
             if !recovered {
-                self.resetToInitialState()
+                self.startReconnectLoop(for: targetID)
             }
         }
         resumeTimeoutWorkItem = timeoutItem
@@ -147,7 +155,10 @@ final class BLEManager: NSObject, ObservableObject {
         publishDiscovered()
 
         peripheral.delegate = self
-        central.connect(peripheral, options: nil)
+        central.connect(
+            peripheral,
+            options: [CBConnectPeripheralOptionNotifyOnDisconnectionKey: true]
+        )
     }
 
     private func clearProtocolState() {
@@ -158,6 +169,63 @@ final class BLEManager: NSObject, ObservableObject {
         connected = nil
     }
 
+    private func clearAttemptState() {
+        connectingID = nil
+        pendingConnection = nil
+    }
+
+    private func cancelReconnectLoop() {
+        reconnectWorkItem?.cancel()
+        reconnectWorkItem = nil
+        reconnectTargetID = nil
+    }
+
+    private func startReconnectLoop(for peripheralID: UUID) {
+        reconnectTargetID = peripheralID
+        startScan()
+        scheduleReconnectTick()
+    }
+
+    private func scheduleReconnectTick() {
+        reconnectWorkItem?.cancel()
+        let item = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            guard let targetID = self.reconnectTargetID else { return }
+            guard self.central.state == .poweredOn else { return }
+            guard !(self.connected?.identifier == targetID && self.isReady) else {
+                self.cancelReconnectLoop()
+                return
+            }
+            guard self.connectingID == nil else {
+                self.scheduleReconnectTick()
+                return
+            }
+
+            // 1) Try already-connected peripherals from system cache.
+            let connectedPeripherals = self.central.retrieveConnectedPeripherals(withServices: [self.serviceUUID])
+            if let existing = connectedPeripherals.first(where: { $0.identifier == targetID }) {
+                self.beginConnection(to: existing)
+                self.scheduleReconnectTick()
+                return
+            }
+
+            // 2) Try known identifier cache.
+            if let known = self.central.retrievePeripherals(withIdentifiers: [targetID]).first {
+                self.beginConnection(to: known)
+                self.scheduleReconnectTick()
+                return
+            }
+
+            // 3) Keep scanning; didDiscover may pick it up later.
+            if !self.isScanning {
+                self.startScan()
+            }
+            self.scheduleReconnectTick()
+        }
+        reconnectWorkItem = item
+        DispatchQueue.main.asyncAfter(deadline: .now() + reconnectInterval, execute: item)
+    }
+
     private func cancelResumeTimeout() {
         resumeTimeoutWorkItem?.cancel()
         resumeTimeoutWorkItem = nil
@@ -165,20 +233,20 @@ final class BLEManager: NSObject, ObservableObject {
 
     private func resetToInitialState() {
         cancelResumeTimeout()
+        manualDisconnectRequested = true
         if let current = connected {
             central.cancelPeripheralConnection(current)
         }
+        cancelReconnectLoop()
         clearProtocolState()
-        connectingID = nil
-        pendingConnection = nil
+        clearAttemptState()
         discoveredByID.removeAll()
         publishDiscovered()
         startScan()
     }
 
     private func finishConnectionAttempt(resumeScan: Bool) {
-        connectingID = nil
-        pendingConnection = nil
+        clearAttemptState()
         if resumeScan {
             startScan()
         }
@@ -214,8 +282,12 @@ extension BLEManager: CBCentralManagerDelegate {
         if central.state == .poweredOn {
             startScan()
         } else {
+            cancelResumeTimeout()
+            cancelReconnectLoop()
             stopScan()
             clearProtocolState()
+            clearAttemptState()
+            manualDisconnectRequested = false
             discoveredByID.removeAll()
             publishDiscovered()
         }
@@ -225,9 +297,16 @@ extension BLEManager: CBCentralManagerDelegate {
         guard let name = peripheral.name, !name.isEmpty else { return }
         discoveredByID[peripheral.identifier] = peripheral
         publishDiscovered()
+
+        if reconnectTargetID == peripheral.identifier, connectingID == nil, connected?.identifier != peripheral.identifier {
+            beginConnection(to: peripheral)
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didConnect peripheral: CBPeripheral) {
+        manualDisconnectRequested = false
+        cancelReconnectLoop()
+        cancelResumeTimeout()
         connectingID = nil
         connected = peripheral
         preSuspendPeripheralID = peripheral.identifier
@@ -242,6 +321,7 @@ extension BLEManager: CBCentralManagerDelegate {
         let next = pendingConnection
         let shouldRetryNext = next != nil && next?.identifier != peripheral.identifier
         let shouldResumeScan = !shouldRetryNext
+        let shouldAutoReconnect = !manualDisconnectRequested && preSuspendPeripheralID == peripheral.identifier
 
         clearProtocolState()
         connectingID = nil
@@ -253,6 +333,9 @@ extension BLEManager: CBCentralManagerDelegate {
         }
 
         finishConnectionAttempt(resumeScan: shouldResumeScan)
+        if shouldAutoReconnect {
+            startReconnectLoop(for: peripheral.identifier)
+        }
     }
 
     func centralManager(_ central: CBCentralManager, didFailToConnect peripheral: CBPeripheral, error: Error?) {
