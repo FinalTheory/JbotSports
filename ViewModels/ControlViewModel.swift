@@ -16,6 +16,7 @@ final class ControlViewModel: ObservableObject {
     @Published var randomRunStartDelaySeconds: Int = 8
     @Published var heartbeatIntervalSeconds: Int = 0
     @Published var debugEnabled: Bool = false
+    @Published var diagnosticsLoggingEnabled: Bool = true
     @Published var appLanguage: AppLanguage = .system
     @Published var isRandomRunActive: Bool = false
     @Published var randomRunAlertMessage: String?
@@ -43,6 +44,7 @@ final class ControlViewModel: ObservableObject {
     private static let heartbeatIntervalStorageKey = "tennis_ctl.heartbeat_interval"
     private static let legacyAngleHeartbeatIntervalStorageKey = "tennis_ctl.angle_heartbeat_interval"
     private static let debugEnabledStorageKey = "tennis_ctl.debug_enabled"
+    private static let diagnosticsLoggingEnabledStorageKey = "tennis_ctl.diagnostics_logging_enabled"
     private static let appLanguageStorageKey = "tennis_ctl.app_language"
 
     init(ble: BLEManager) {
@@ -61,11 +63,17 @@ final class ControlViewModel: ObservableObject {
             self.heartbeatIntervalSeconds = UserDefaults.standard.integer(forKey: Self.legacyAngleHeartbeatIntervalStorageKey)
         }
         self.debugEnabled = UserDefaults.standard.bool(forKey: Self.debugEnabledStorageKey)
+        if UserDefaults.standard.object(forKey: Self.diagnosticsLoggingEnabledStorageKey) == nil {
+            self.diagnosticsLoggingEnabled = true
+        } else {
+            self.diagnosticsLoggingEnabled = UserDefaults.standard.bool(forKey: Self.diagnosticsLoggingEnabledStorageKey)
+        }
         if let raw = UserDefaults.standard.string(forKey: Self.appLanguageStorageKey),
            let language = AppLanguage(rawValue: raw) {
             self.appLanguage = language
         }
         applyLanguagePreference(self.appLanguage)
+        ble.setDiagnosticsLoggingEnabled(self.diagnosticsLoggingEnabled)
         if let firstPreset = self.presets.first {
             self.activePresetID = firstPreset.id
             self.topSpeed = firstPreset.topSpeed
@@ -225,6 +233,13 @@ final class ControlViewModel: ObservableObject {
         UserDefaults.standard.set(enabled, forKey: Self.debugEnabledStorageKey)
     }
 
+    func setDiagnosticsLoggingEnabled(_ enabled: Bool) {
+        guard enabled != diagnosticsLoggingEnabled else { return }
+        diagnosticsLoggingEnabled = enabled
+        UserDefaults.standard.set(enabled, forKey: Self.diagnosticsLoggingEnabledStorageKey)
+        ble.setDiagnosticsLoggingEnabled(enabled)
+    }
+
     func setHeartbeatInterval(seconds: Int) {
         let normalized = max(0, min(30, seconds))
         guard normalized != heartbeatIntervalSeconds else { return }
@@ -242,6 +257,14 @@ final class ControlViewModel: ObservableObject {
         appLanguage = language
         UserDefaults.standard.set(language.rawValue, forKey: Self.appLanguageStorageKey)
         applyLanguagePreference(language)
+    }
+
+    func uploadBLELog() async throws -> URL {
+        try await ble.uploadDiagnosticsLog()
+    }
+
+    func clearBLELog() throws {
+        try ble.clearDiagnosticsLog()
     }
 
     private func applyLanguagePreference(_ language: AppLanguage) {
@@ -281,7 +304,9 @@ final class ControlViewModel: ObservableObject {
             repeats: true
         ) { [weak self] _ in
             guard let self else { return }
-            self.ble.send(TennisCommand.setFrequency(UInt8(self.frequency)))
+            Task { @MainActor in
+                self.ble.send(TennisCommand.setFrequency(UInt8(self.frequency)))
+            }
         }
     }
 

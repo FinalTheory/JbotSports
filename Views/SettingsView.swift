@@ -3,6 +3,11 @@ import SwiftUI
 struct SettingsView: View {
     @ObservedObject var vm: ControlViewModel
     @State private var showRestartHint = false
+    @State private var isUploadingLog = false
+    @State private var showUploadResult = false
+    @State private var uploadResultTitle = ""
+    @State private var uploadResultMessage = ""
+    @State private var showClearLogConfirm = false
 
     var body: some View {
         List {
@@ -20,6 +25,11 @@ struct SettingsView: View {
             Toggle(NSLocalizedString("label_debug", comment: "Debug"), isOn: Binding(
                 get: { vm.debugEnabled },
                 set: { vm.setDebugEnabled($0) }
+            ))
+
+            Toggle(NSLocalizedString("label_ble_log_recording", comment: "BLE log recording"), isOn: Binding(
+                get: { vm.diagnosticsLoggingEnabled },
+                set: { vm.setDiagnosticsLoggingEnabled($0) }
             ))
 
             NavigationLink {
@@ -75,8 +85,39 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            Button {
+                uploadBLELog()
+            } label: {
+                HStack {
+                    Text(NSLocalizedString("action_upload_ble_log", comment: "Upload BLE log"))
+                    Spacer()
+                    if isUploadingLog {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
+                }
+            }
+            .disabled(isUploadingLog)
+
+            Button(NSLocalizedString("action_clear_ble_log", comment: "Clear BLE log"), role: .destructive) {
+                showClearLogConfirm = true
+            }
         }
         .navigationTitle(NSLocalizedString("title_settings", comment: "Settings"))
+        .alert(uploadResultTitle, isPresented: $showUploadResult) {
+            Button(NSLocalizedString("action_ok", comment: "OK"), role: .cancel) {}
+        } message: {
+            Text(uploadResultMessage)
+        }
+        .alert(NSLocalizedString("title_clear_ble_log", comment: "Clear BLE log"), isPresented: $showClearLogConfirm) {
+            Button(NSLocalizedString("action_clear_ble_log", comment: "Clear BLE log"), role: .destructive) {
+                clearBLELog()
+            }
+            Button(NSLocalizedString("action_cancel", comment: "Cancel"), role: .cancel) {}
+        } message: {
+            Text(NSLocalizedString("message_clear_ble_log_confirm", comment: "Confirm BLE log clear"))
+        }
     }
 
     private var languagePickerView: some View {
@@ -114,6 +155,43 @@ struct SettingsView: View {
             return NSLocalizedString("label_english", comment: "English language")
         case .chineseSimplified:
             return NSLocalizedString("label_chinese_simplified", comment: "Simplified Chinese language")
+        }
+    }
+
+    private func uploadBLELog() {
+        guard !isUploadingLog else { return }
+        isUploadingLog = true
+
+        Task {
+            do {
+                let url = try await vm.uploadBLELog()
+                await MainActor.run {
+                    isUploadingLog = false
+                    uploadResultTitle = NSLocalizedString("title_ble_log_upload_success", comment: "BLE log upload success")
+                    uploadResultMessage = url.absoluteString
+                    showUploadResult = true
+                }
+            } catch {
+                await MainActor.run {
+                    isUploadingLog = false
+                    uploadResultTitle = NSLocalizedString("title_ble_log_upload_failed", comment: "BLE log upload failed")
+                    uploadResultMessage = error.localizedDescription
+                    showUploadResult = true
+                }
+            }
+        }
+    }
+
+    private func clearBLELog() {
+        do {
+            try vm.clearBLELog()
+            uploadResultTitle = NSLocalizedString("title_ble_log_cleared", comment: "BLE log cleared")
+            uploadResultMessage = NSLocalizedString("message_ble_log_cleared", comment: "BLE log cleared message")
+            showUploadResult = true
+        } catch {
+            uploadResultTitle = NSLocalizedString("title_ble_log_clear_failed", comment: "BLE log clear failed")
+            uploadResultMessage = error.localizedDescription
+            showUploadResult = true
         }
     }
 }

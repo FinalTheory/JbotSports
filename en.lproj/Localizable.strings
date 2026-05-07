@@ -63,3 +63,13 @@
 "title_language_applied" = "Language Updated";
 "message_restart_required" = "Language will fully apply after restarting the app.";
 "label_heartbeat_interval" = "Heartbeat Interval";
+"label_ble_log_recording" = "BLE Log Recording";
+"action_upload_ble_log" = "Upload BLE Log";
+"action_clear_ble_log" = "Clear BLE Log";
+"title_clear_ble_log" = "Clear BLE Log";
+"message_clear_ble_log_confirm" = "This will permanently delete the saved BLE log.";
+"title_ble_log_upload_success" = "Upload Complete";
+"title_ble_log_upload_failed" = "Upload Failed";
+"title_ble_log_cleared" = "Log Cleared";
+"title_ble_log_clear_failed" = "Clear Failed";
+"message_ble_log_cleared" = "BLE log has been removed.";

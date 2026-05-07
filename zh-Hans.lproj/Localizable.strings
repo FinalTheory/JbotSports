@@ -63,3 +63,13 @@
 "title_language_applied" = "语言已更新";
 "message_restart_required" = "重启应用后将完全应用新语言。";
 "label_heartbeat_interval" = "心跳间隔";
+"label_ble_log_recording" = "BLE日志记录";
+"action_upload_ble_log" = "上传BLE日志";
+"action_clear_ble_log" = "清空BLE日志";
+"title_clear_ble_log" = "清空BLE日志";
+"message_clear_ble_log_confirm" = "这会永久删除已保存的BLE日志。";
+"title_ble_log_upload_success" = "上传完成";
+"title_ble_log_upload_failed" = "上传失败";
+"title_ble_log_cleared" = "日志已清空";
+"title_ble_log_clear_failed" = "清空失败";
+"message_ble_log_cleared" = "BLE日志已被删除。";

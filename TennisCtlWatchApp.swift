@@ -5,6 +5,7 @@ struct TennisCtlWatchApp: App {
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var ble: BLEManager
     @StateObject private var vm: ControlViewModel
+    @State private var previousScenePhase: ScenePhase = .active
     @State private var txFlashText: String = ""
     @State private var txFlashVisible: Bool = false
     @State private var txFlashToken: UUID = UUID()
@@ -82,10 +83,14 @@ struct TennisCtlWatchApp: App {
                     }
             }
             .onChange(of: scenePhase) { phase in
+                let prior = previousScenePhase
+                previousScenePhase = phase
                 switch phase {
                 case .background:
                     ble.prepareForBackground()
                 case .active:
+                    guard prior == .background else { return }
+                    guard !ble.isReady, ble.connectingID == nil else { return }
                     ble.resumeConnectionAfterForeground(timeout: 3.0)
                 default:
                     break
